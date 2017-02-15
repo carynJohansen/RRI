@@ -1,0 +1,73 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Department of Plant Science - Departmental Graduate Student Research Assistantships
+
+Due date: March 15, 2017 (??)
+
+Material to be submitted:
+- Research proposal
+- Resume or CV
+- Letter of Reference
+- Undergraduate and Graduate Transcripts
+- GRE scores
+
+
+Proposal:
+  - Relevance or justification
+  - Goals and objectives
+  - Experimental Plan
+  
+My general thoughts:
+
+- model the genotypic impact on measurable traits
+  - meaning create a model to predict traits based on a model including genotype and kinship
+
+So introduction topics will be:
+  - need to understand how to predict traits
+  - simple ways this has been implimented
+  - adding complexity - GxE, kinship/relatedness
+  - simplifying genetic complexity via creating modules
+  - modeling background
+  - potential uses for this type of approach
+  
+Several calls for re-thinking the statistical approaches for calculating 
+
+OR dealing with the small-effect/latent genes that also have a cumulative major impact on traits, but
+go unmeasured because of statistical power/their small effects
+  
+Modeling can be useful for seeing outliers, looking for adaptation within measured groups, seeing adaptation 
+outside of groups.
+  
+What results in traits
+  - genomic quality (dominance, heritability, effect size)
+  - selection (adaptation to environment)
+  - drift
+  - population structure
+  
+Goals and Objectives
+  - Model
+  - Incorporate 
+  
+==========
+
+Current benefits of GWAS
+GWA studies are used to find association/correlation between a trait and a genomic marker, often a signle
+nucleotide polymorphism, and are used in almost all fields of biological research. However, each organism
+and population, and research goal, introduces new assumptions and limitations to a GWA study.
+Genome wide association (GWA) studies investigating association between genes and traits of interest
+have led to the discovery and characterization of many causal genes in maize [citations].
+Something about the limitations and assumptions of 
+
+
+=========
+Q_x is the way it will be
+
+So, I'm finishing the GWAS on the traits
+
+Then doing GWAS on the modules, using FPKM as the traits
+  - here, eigengenes
+  
+Then, doing GWAS on the genes within each module, and looking for small cis effects (still using FPKM as the trait?)
