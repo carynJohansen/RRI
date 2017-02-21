@@ -1,0 +1,268 @@
+---
+title: "Graphing gemma lmm output"
+output:
+  html_document:
+    self_contained: no
+  html_notebook: default
+---
+
+Ran GEMMA on traits and relatedness matrix
+
+```{r}
+setwd("~/Dropbox/UCD/rotations/RRI/maize_genomics_project")
+```
+
+Load libraries
+
+```{r}
+library(ggplot2)
+library(fdrtool)
+```
+
+Trait names
+
+```{r}
+traits <- read.table("data/gemma_input/traits.txt", sep=",")
+#get ride of the first value, which is the word "taxa"
+traits <- traits[,-1]
+```
+(Wisconsin Diversity Panel Phenotypes)  
+GDD: days to flowering (growing degree days)  
+kernel300 - weight of 300 kernels (g)  
+stalk - stalk diameter (cm)  
+plant_height - cm  
+ear_height - cm  
+leaf_number - number of leaves  
+stover_yield - $t ha^{-1}$  
+juvenile - last leaf with epicuticular wax (length? what is this?)  
+ear_internode - uppermost internode with developed ear (unit?)  
+internode_length - cm  
+internode\_above_ear - number of internodes above uppermost ear  
+adult - number of leaves with no epicuticular wax  
+percent_juvenile - percent of leave with epicuticular wax  
+percentage_adult - percent of leaves with no epicuticular wax  
+
+#GEMMA Univariate Linear Mixed Model
+
+The equation:
+
+$$y = W \alpha + x \beta + u + \epsilon$$
+$$u \sim MVN_n(0,\lambda\tau^{-1}K), \epsilon \sim MVN_n(0,\tau^{-1}I_n)$$
+$y$ = n-vector of quantitative traits for $n$ individuals  
+$W$ = nxc matrix of covariates (fixed effects)  
+$\alpha$ = c-vector of corresponding coefficients including the intercept  
+$x$ = n-vector of marker genotypes  
+$\beta$ = effect sixe of the marker  
+$u$ = n-vector of random effects  
+$\epsilon$ = n-vector or errors  
+$\tau^{-1}$ = variance of the residual errors  
+$\lambda$ = ratio between the two variance components  
+$K$ = known nxn relatedness matrix  
+$I_n$ = nxn identity matrix  
+$MVN_n$ = n-dimenstional multivariate normal distribution
+
+Loop through traits and plot the results of the LMM:
+
+plot, with location on the x-axis and negative log of the p-value on the y-axis
+
+
+
+```{r}
+gwas_graphs <- list()
+
+for (i in 1:length(traits)) {
+  t <- as.character(traits[1,i])
+  
+  gwas_path <- paste(paste("data/gemma_output/", t, sep=""), "/", sep="")
+  
+  assoc_file <- paste(paste("ZeaGBSv27_", t, sep=""), ".assoc.txt", sep="")
+  print(paste(gwas_path, assoc_file, sep=""))
+  
+  assoc <- read.table(paste(gwas_path, assoc_file, sep=""), sep="\t", header=T)
+  assoc$chr <- as.factor(as.integer(assoc$chr))
+  assoc <- assoc[order(assoc$chr, assoc$ps),]
+  assoc$counter <- c(1:nrow(assoc))
+  
+  p_rank <- assoc[order(assoc$p_score, decreasing = FALSE),]$p_score
+  q <- 0.2
+  
+  print(dim(assoc))
+  #add the negative log value for the p-values
+  assoc$NegLogPScore <- -log(assoc$p_score)
+  
+  gwas_plot_file <- paste("output/gwas_plots/", paste(t, "_assoc.p_values.pdf", sep=""), sep="")
+  print(gwas_plot_file)
+  
+  #pdf(gwas_plot_file)
+  #ggplot(assoc, aes(x=rs, y=NegLogPScore, colour=as.factor(chr))) +
+  #  geom_point(size=1.5) + 
+  #  labs(x = "position", y = "-log(p-vlaue)", title=t, colours="Chromosome") +
+  #  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  #dev.off()
+  
+  p <- ggplot(assoc, aes(x=counter, y=NegLogPScore, colour=as.factor(chr))) +
+    geom_point(size=1.5) + 
+    labs(x = "position", y = "-log(p-vlaue)", title=t, colours="Chromosome") +
+    theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  gwas_graphs[[i]] <- p
+}
+```
+
+
+```{r}
+for (i in 1:13) {
+  print(gwas_graphs[[i]])
+}
+```
+
+Adult high association
+
+```{r}
+adult <- read.table("data/gemma_output/adult/ZeaGBSv27_adult.assoc.txt", sep="\t", header=T)
+adult$NegLogPScore <- -log(adult$p_score)
+adult_high <- adult[adult$NegLogPScore > 8,]
+```
+
+# Filtering fewer alleles
+
+Using the minor allele frequency filter of 0.05 resulted in few SNPs:
+
+![](~/Dropbox/UCD/rotations/RRI/maize_genomics_project/data/lowerFreq/screenshot_0.05MAF_SNPcount.png)
+
+Use 0.01 as the MAF filter instead: (this is the cutoff that GEMMA would use anyway)
+
+![](~/Dropbox/UCD/rotations/RRI/maize_genomics_project/data/lowerFreq/screenshot_0.01MAF_SNPcount.png)
+
+
+Why such a large reduction?
+
+Correlation with covariate?: "By default, SNPs with $r^2$ correlation with any of the covariates
+above 0.9999 will not be included in the analysis."
+
+Frequency of missing data at the filtered sites:
+
+```{r}
+lmiss <- read.table("data/lowerFreq/ZeaGBSv27_sf_vcfInfo.lmiss", sep="\t", header=T)
+
+hist(lmiss$F_MISS)
+
+imiss <- read.table("data/lowerFreq/ZeaGBSv27_sf_vcfInfo.imiss", sep="\t", header=T)
+hist(imiss$F_MISS)
+```
+
+###Drop individuals with high missing (CG108:250007680, but also above 40%, or 60%)
+###Site frequency spectrum
+
+Relatedness - either centered or scaled
+
+"Specifically,  if  SNPs  with  lower  minor  allele  frequency  tend  to
+have larger effects (which is inversely proportional to its genotype variance), then the standardized
+genotype matrix is preferred.  If the SNP effect size does not depend on its minor allele frequency,
+then  the  centered  genotype  matrix  is  preferred.   In  our  previous  experience  based  on  a  limited
+examples,  we  typically  find  the  centered  genotype  matrix  provides  better  control  for  population
+structure in lower organisms, and the two matrices seem to perform similarly in humans."
+
+
+Graph the gmwas plots, and image the relatedness matrices
+
+```{r}
+gwas_graphs <- list()
+rel_matrices <- list()
+
+for (i in 1:length(traits)) {
+  t <- as.character(traits[1,i])
+  
+  gwas_path <- paste(paste("data/lowerFreq/", t, sep=""), "/", sep="")
+  
+  assoc_file <- paste(paste("output/ZeaGBSv27_", t, sep=""), ".assoc.txt", sep="")
+  print(paste(gwas_path, assoc_file, sep=""))
+  
+  assoc <- read.table(paste(gwas_path, assoc_file, sep=""), sep="\t", header=T)
+  print(dim(assoc))
+  #add the negative log value for the p-values
+  assoc$NegLogPScore <- -log(assoc$p_score)
+  
+  fdr <- p.adjust(assoc$p_score, method = "fdr")
+  
+  gwas_plot_file <- paste("output/lowerFreq_gwasPlots/", paste(t, "_assoc.p_values.pdf", sep=""), sep="")
+  print(gwas_plot_file)
+  
+  #pdf(gwas_plot_file)
+  ggplot(assoc, aes(x=rs, y=NegLogPScore, colour=as.factor(chr))) +
+    geom_point(size=1.5) + 
+    labs(x = "position", y = "-log(p-vlaue)", title=t, colours="Chromosome") +
+    theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  +
+    geom_hline(yintercept = -log())
+  #dev.off()
+  
+  p <- ggplot(assoc, aes(x=rs, y=NegLogPScore, colour=as.factor(chr))) +
+    geom_point(size=1.5) + 
+    labs(x = "position", y = "-log(p-vlaue)", title=t, colours="Chromosome") +
+    theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+    geom_hline(yintercept = -log(0.2))
+  gwas_graphs[[i]] <- p
+  
+  #relatedness plot
+  relMat_path <- paste("data/lowerFreq/", paste(t, "/output/ZeaGBSv27_sF_F.sXX.txt", sep=""), sep="")
+  #print(relMat_path)
+  relMat <- read.table(relMat_path, header=F, sep="\t")
+  image(as.matrix(relMat))
+  #rel_matrices[[i]] <- r
+}
+```
+
+local false sign rate?
+
+ashr - give beta and se from gemma output
+
+permutations in phenotype in lmm? to calibrate p-values
+
+test p-values against qqplot - assess with true positives
+
+genomic control
+
+Print GWAS and relatedness matrices
+
+```{r}
+for (i in 1:13){
+  #print(rel_matrices[[i]])
+  print(gwas_graphs[[i]])
+}
+```
+
+```{r}
+stalk <- read.table("data/lowerFreq/stalk/output/ZeaGBSv27_stalk.assoc.txt", sep="\t", header=T)
+
+stalk$NegLogPScore <- -log(stalk$p_score)
+stalk_high <- stalk[stalk$NegLogPScore > 7,]
+
+height <- read.table("data/lowerFreq/plant_height/output/ZeaGBSv27_plant_height.assoc.txt")
+
+h.rel <- read.table("data/lowerFreq/plant_height/output/ZeaGBSv27_sF_F.sXX.txt", sep="\t")
+image(as.matrix(h.rel))
+```
+
+Peak in Chromosome 10 - a G2-like GARP family TF - involved in chloroplast development, GRMZM2G124495_T01
+
+Peak in adult, chromosome 7 - unidentitified DNA-binding gene, GRMZM5G843213
+
+
+Next:
+
+fix plots
+
+calculate FDR (padjust)
+
+Try ashr
+
+Qx - take top X hits for each trait
+  Emily
+  Markus
+
+Expression gwas
+
+Gwas -
+  pop structure
+  dropping individuals/ why are snps being dropped
+  

@@ -1,0 +1,89 @@
+---
+title: "WGCNA output"
+author: "Caryn Johansen"
+date: "2/16/2017"
+output: html_document
+---
+
+
+Purpose: to become familiar with Rongkui's WGCNA output data
+
+```{r}
+setwd("~/Dropbox/UCD/rotations/RRI/maize_genomics_project/")
+
+library(gplots)
+library(ggplot2)
+library(qqman)
+```
+
+Load wgcna Rdata file
+
+load expression data
+
+```{r}
+load("data/wgcna_output/maize490-networkConstruction-stepByStep.RData")
+load("data/wgcna_output/503line_names.RData")
+load("data/wgcna_output/line_names_361.RData")
+load("data/wgcna_output/maize361-networkConstruction-stepByStep.RData")
+
+exp <- read.table("../Hirsch_correlations/data/processed/maize_503genotypes_FPKM_expressed.txt", header=T)
+write.table(expdata503_names, file="maize_503Exp_originalNames.txt", sep="\n", quote=F, row.names = F)
+```
+
+Plot the gene clusters
+
+```{r}
+heatmap.2(as.matrix(MEs_361), trace = "none", Rowv = F)
+```
+
+
+######
+##WGCNA Module GWAS
+
+GWA done for each module PC1, using genotype data for included lines
+
+$$y = x\beta + u + \epsilon$$
+
+Where:
+$y$ is the n-vector WGCNA module PC1  
+$x$ is n-vector of marker genotypes  
+$\beta$ is the effect size of the marker  
+$u$ is the vector of random effects $u \sim MVN_n(0, \lambda\tau^{-1} K)$  
+$\epsilon$ is the error vector $\epsilon \sim MVN_n(0, \tau^{-1} I_n)$
+
+```{r}
+mods <- colnames(MEs_361)
+mods
+
+```
+
+```{r, fig.show='hold'}
+
+for (i in 1:length(mods)) {
+  mod_path <- paste(paste("data/wgcna_output/", mods[i], sep=""), "/output/", sep="")
+  assoc.file <- paste(paste("ZeaGBSv27_", mods[i], sep=""), ".assoc.txt", sep="")
+  rel.file <- "ZeaGSv27_sF.sXX.txt"
+  ME.assoc <- read.table(paste(mod_path, assoc.file, sep=""), header=T)
+  #ME.assoc$chr <- factor(as.character(ME.assoc$chr), levels = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"))
+  ME.assoc$chr <- as.numeric(as.integer(ME.assoc$chr))
+
+  #Order and add counter for positioning
+  #ME.assoc <- ME.assoc[order(ME.assoc$chr, ME.assoc$ps, decreasing = F),]
+
+  #ME.assoc$NegP <- -log(ME.assoc$p_score)
+  #ME.assoc$fdr <- p.adjust(ME.assoc$p_score, method="fdr")
+  #ME.assoc$counter <- seq(1:nrow(ME.assoc))
+  #p <- ggplot(ME.assoc, aes(x=counter, y = NegP, colour=chr)) +
+  #  geom_point(size=1.0) +
+  #  labs(x = "position (not true)", y = "-log(p)") +
+  #  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  #f <- ggplot(ME.assoc, aes(x=counter, y = -log(fdr), colour=chr)) +
+  #  geom_point(size=1.0) +
+  #  labs(x = "position (not true)", y = "-log(fdr)") +
+  #  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  par(mfrow=c(1,2), las=1)
+  manhattan(ME.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=mods[i])
+  qq(ME.assoc$p_score, main=paste(mods[i], "Q-Q plot of GWAS p-values", sep="\n"))
+}
+```
+

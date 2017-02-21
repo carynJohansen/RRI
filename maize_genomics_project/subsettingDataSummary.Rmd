@@ -1,0 +1,55 @@
+---
+title: "Data Subsetting"
+author: "Caryn Johansen"
+date: "2/20/2017"
+output: html_document
+---
+
+```{r}
+setwd("~/Dropbox/UCD/rotations/RRI/maize_genomics_project")
+```
+
+Number of lines in the expression data:
+
+```{r}
+exp_raw <- read.table("data/processing/maize_503genotypes_raw_expression_values_FPKM_cleaned.txt", header=T, sep="\t")
+dim(exp_raw)
+
+lines <- names(exp_raw)[5:507]
+```
+
+Lines in the phenotype data:
+
+```{r}
+phenotype <- read.table("data/processed/WIDIV_2010_paper_phenotypic_data_cleaned.csv", header=T, sep=",")
+2856/4
+pheno_lines <- phenotype[phenotype$Year == "2008" & phenotype$Rep == 1,]$Entry
+write.table(pheno_lines, file="data/processed/WIDIV_phenotype_lines.txt", sep="\n", quote = F, row.names = F)
+```
+
+Imputed traits
+
+```{r}
+
+```
+
+MetaMatches:
+
+```{r}
+meta <- read.table("data/processed/maize_503Exp_metaMatches.csv", sep=",", header=T,
+                   na.strings = ".")
+
+PE_GBS_overlap <- meta[complete.cases(meta$PE_overlap) & meta$FullName != "no dictionary match",]
+
+#But with Rongkui's data:
+
+load("data/wgcna_output/line_names_361.RData")
+meta361 <- meta[meta$OriginalName %in% linenames361,]
+
+#and of these 361, lines with phenotype data and a GBS name
+meta361_overlap <- meta361[complete.cases(meta361$PE_overlap) & meta361$FullName != "no dictionary match",]
+
+write.table(meta361_overlap$FullName, file="data/maize_304_GBS.txt", sep="\n", quote = F, row.names = F, col.names = F)
+
+```
+

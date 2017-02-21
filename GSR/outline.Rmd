@@ -14,7 +14,6 @@ Material to be submitted:
 - Undergraduate and Graduate Transcripts
 - GRE scores
 
-
 Proposal:
   - Relevance or justification
   - Goals and objectives
@@ -25,14 +24,23 @@ My general thoughts:
 - model the genotypic impact on measurable traits
   - meaning create a model to predict traits based on a model including genotype and kinship
 
+Overall drive of the project will be to look for modules of genes (gene clusters) that have undergone
+selection for certain traits.
+
+1. Gene modules using WGCNA
+2. use the eigenvalues from the modules (the PC1) as the trait and model using the genotype values and kinship as fixed effect
+  2.a. do I need to add covariates? What are the covariates in this case?
+3. use the FPKM of the each of the genes within a module to do GWAS on each of those genes
+4. Collect the top SNPs from all of the gwas studies and perform a Qx to look for regions of the genome that have diverged (been under selection)
+
 So introduction topics will be:
-  - need to understand how to predict traits
+  - The need to understand how to predict traits
   - simple ways this has been implimented
-  - adding complexity - GxE, kinship/relatedness
+  - Issues in GWAS - relateness, and how to deal with it
   - simplifying genetic complexity via creating modules
-  - modeling background
+  - GWAS background
   - potential uses for this type of approach
-  
+
 Several calls for re-thinking the statistical approaches for calculating 
 
 OR dealing with the small-effect/latent genes that also have a cumulative major impact on traits, but
@@ -71,3 +79,19 @@ Then doing GWAS on the modules, using FPKM as the traits
   - here, eigengenes
   
 Then, doing GWAS on the genes within each module, and looking for small cis effects (still using FPKM as the trait?)
+
+This will produce a set of SNPs, some that are invluential to the module as a whole (from the eigengene GWAS) and 
+others that are more important to an individual gene within the module (SNPs from individual gene GWAS).
+
+From this set of SNPs, perform a Qx analysis, which will look for the ditribution of the traits among populations
+that is not explained by relatedness. A positive hit in Qx indicates that that SNP has variation that is different 
+(probably a higher degree of variance) than the expected MVN distribution.
+
+Where this is tricky is... what does this mean? That the eigengene has a SNP that has been under selection, so all the genes
+in the module are underselection?
+
+
+
+
+
+
