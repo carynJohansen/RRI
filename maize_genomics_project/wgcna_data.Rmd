@@ -21,19 +21,85 @@ Load wgcna Rdata file
 load expression data
 
 ```{r}
-load("data/wgcna_output/maize490-networkConstruction-stepByStep.RData")
-load("data/wgcna_output/503line_names.RData")
-load("data/wgcna_output/line_names_361.RData")
-load("data/wgcna_output/maize361-networkConstruction-stepByStep.RData")
+#load("data/wgcna_gwas_output/maize490-networkConstruction-stepByStep.RData")
+#load("data/wgcna_gwas_output/503line_names.RData")
+load("data/wgcna_gwas_output/line_names_361.RData")
+load("data/wgcna_gwas_output/maize361-networkConstruction-stepByStep.RData")
 
 exp <- read.table("../Hirsch_correlations/data/processed/maize_503genotypes_FPKM_expressed.txt", header=T)
-write.table(expdata503_names, file="maize_503Exp_originalNames.txt", sep="\n", quote=F, row.names = F)
+#write.table(expdata503_names, file="maize_503Exp_originalNames.txt", sep="\n", quote=F, row.names = F)
 ```
 
-Plot the gene clusters
+#Data processing
+
+Maize Genotypes were downloaded from panzea genotype data. I used the Maize GBS genotypes version 2.7 (http://cbsusrv04.tc.cornell.edu/users/panzea/download.aspx?filegroupid=4)
+
+Specifically, the file ZeaGBSv27_publicSamples_imputedV5_AGPv3_20170206.h5, imputed genotypes with ACPv3 coordinates.
+
+To process this file, this was first converted into hapmap format, then converted into VCF [make one step?]. In addition, the panzea
+data has genotype data for 17,280 public maize lines. The genotype data was subsetted with a list of maize lines used for the 
+Wisconsin diversity panel. In addition, only maize lines with complete expression were used, and, for the final
+GWAS, lines with high frequency of missing genotypes were filtered out. This resulted in 304 maize lines included
+in the analysis.
+
+# Filtering
+
+Used compared vcftools to tassel minor allele frequency filtering:
+
+Missing data by locus:
 
 ```{r}
-heatmap.2(as.matrix(MEs_361), trace = "none", Rowv = F)
+vcf_lmiss <- read.table("data/wgcna_gwas_output/ZeaGBSv27_sF_vcfInfo.lmiss", header = T)
+tassel_lmiss <- read.table("data/wgcna_gwas_output/ZeaGBSv27_stF_vcfInfo.lmiss", header=T)
+
+dim(vcf_lmiss)
+dim(tassel_lmiss)
+
+par(mfrow=c(1,2))
+hist(vcf_lmiss$F_MISS, main="vcftool filtered")
+hist(tassel_lmiss$F_MISS, main="tassel filtered")
+```
+
+By locus, vcftools filtered more than tassel did.
+
+Missing data by locus:
+```{r}
+vcf_imiss <- read.table("data/wgcna_gwas_output/ZeaGBSv27_sF_vcfInfo.imiss", header = T)
+tassel_imiss <- read.table("data/wgcna_gwas_output/ZeaGBSv27_stF_vcfInfo.imiss", header=T)
+
+par(mfrow=c(1,2))
+hist(vcf_imiss$F_MISS, breaks = 20)
+hist(tassel_imiss$F_MISS, breaks = 20)
+
+bad_lines <- vcf_imiss[vcf_imiss$F_MISS >= 0.4,]
+bad_lines <- as.character(bad_lines$INDV)
+#load in the lines used for the analysis, remove poor-quality lines, and re-run GWAS
+maize304 <- read.table("data/maize_304_GBS.txt")
+taxa <- as.character(maize304$V1)
+
+taxa <- taxa[!(taxa %in% bad_lines)]
+#write.table(taxa,"data/maize_304_GBS_c.txt", quote = F, row.names = F, col.names = F)
+```
+
+Run GWAS without the maize lines with a high frequency of missing data. Remember to do this first next time.
+
+
+##Site Frequency Spectrum
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+library(reshape2)
+a_freq <- read.table("ZEAGBSv27_s_F_freq.csv", sep=",", header=T)
+a_freq <- a_freq[,-c(9:16)]
+
+af <- a_freq[,c(1,2,6,8)]
+
+afl <- reshape(af, varying=c("A1_FREQ","A2_FREQ"), 
+               idvar=c("CHROM", "POS"), v.names="FREQ", times=c("A1_FREQ", "A2_FREQ"), direction = "long")
+afl$time <- as.factor(afl$time)
+afl_chr1 <- afl[afl$CHROM == 1,]
+
+ggplot(afl_chr1, aes(x=POS, y=FREQ, colour=time) ) +
+  geom_line()
 ```
 
 
@@ -54,36 +120,85 @@ $\epsilon$ is the error vector $\epsilon \sim MVN_n(0, \tau^{-1} I_n)$
 ```{r}
 mods <- colnames(MEs_361)
 mods
-
 ```
 
-```{r, fig.show='hold'}
+```{r, fig.show='hold', fig.width=12, fig.height=8}
 
 for (i in 1:length(mods)) {
-  mod_path <- paste(paste("data/wgcna_output/", mods[i], sep=""), "/output/", sep="")
+  mod_path <- paste(paste("data/wgcna_gwas_output/", mods[i], sep=""), "/output/", sep="")
   assoc.file <- paste(paste("ZeaGBSv27_", mods[i], sep=""), ".assoc.txt", sep="")
   rel.file <- "ZeaGSv27_sF.sXX.txt"
   ME.assoc <- read.table(paste(mod_path, assoc.file, sep=""), header=T)
-  #ME.assoc$chr <- factor(as.character(ME.assoc$chr), levels = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"))
+
   ME.assoc$chr <- as.numeric(as.integer(ME.assoc$chr))
-
-  #Order and add counter for positioning
-  #ME.assoc <- ME.assoc[order(ME.assoc$chr, ME.assoc$ps, decreasing = F),]
-
-  #ME.assoc$NegP <- -log(ME.assoc$p_score)
-  #ME.assoc$fdr <- p.adjust(ME.assoc$p_score, method="fdr")
-  #ME.assoc$counter <- seq(1:nrow(ME.assoc))
-  #p <- ggplot(ME.assoc, aes(x=counter, y = NegP, colour=chr)) +
-  #  geom_point(size=1.0) +
-  #  labs(x = "position (not true)", y = "-log(p)") +
-  #  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
-  #f <- ggplot(ME.assoc, aes(x=counter, y = -log(fdr), colour=chr)) +
-  #  geom_point(size=1.0) +
-  #  labs(x = "position (not true)", y = "-log(fdr)") +
-  #  theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
-  par(mfrow=c(1,2), las=1)
+  
+  #par(mfrow=c(1,2), las=1)
   manhattan(ME.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=mods[i])
   qq(ME.assoc$p_score, main=paste(mods[i], "Q-Q plot of GWAS p-values", sep="\n"))
 }
+```
+
+Grey60 Module
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+greyM <- mods[1]
+greyM
+
+grey.assoc <- read.table("data/wgcna_gwas_output/MEgrey60/output/ZeaGBSv27_MEgrey60.assoc.txt", header=T)
+
+grey.assoc$chr <- as.numeric(as.integer(grey.assoc$chr))
+
+grey_high <- grey.assoc[grey.assoc$p_score < 0.0001,]
+soi <- grey_high$rs
+
+manhattan(grey.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=greyM)#, highlight = soi)
+manhattan(subset(grey.assoc, chr == 10), chr="chr", snp="rs", bp="ps", p="p_score", main=greyM)
+qq(grey.assoc$p_score, main=paste(greyM, "Q-Q plot of GWAS p-values", sep="\n"))
+```
+
+Blue Module
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+blueM <- mods[2]
+
+blue.assoc <- read.table("data/wgcna_gwas_output/MEblue/output/ZeaGBSv27_MEblue.assoc.txt", header=T)
+
+blue.assoc$chr <- as.numeric(as.integer(blue.assoc$chr))
+
+blue_high <- blue.assoc[blue.assoc$p_score < 0.0001,]
+soi <- blue_high$rs
+
+manhattan(blue.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=blueM, highlight = soi)
+manhattan(subset(blue.assoc, chr == 10), chr="chr", snp="rs", bp="ps", p="p_score", main=blueM)
+qq(blue.assoc$p_score, main=paste(blueM, "Q-Q plot of GWAS p-values", sep="\n"))
+```
+
+Midnight Blue Module
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+MMM <- mods[4]
+MMM
+
+MMM.assoc <- read.table("data/wgcna_gwas_output/MEmidnightblue/output/ZeaGBSv27_MEmidnightblue.assoc.txt", header=T)
+
+MMM.assoc$chr <- as.numeric(as.integer(MMM.assoc$chr))
+
+MMM_high <- MMM.assoc[MMM.assoc$p_score < 0.0001,]
+soi <- MMM_high$rs
+MMM7 <- MMM.assoc[MMM.assoc$chr == 7,]
+grmzm2g001114 <- MMM7[MMM7$ps >= 82620000,]
+
+manhattan(MMM.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=MMM, highlight = soi)
+manhattan(subset(MMM.assoc, chr == 7), chr="chr", snp="rs", bp="ps", p="p_score", main=MMM, highlight = soi)
+qq(MMM.assoc$p_score, main=paste(MMM, "Q-Q plot of GWAS p-values", sep="\n"))
+```
+
+The significant peak on Chromosome 7 is GRMZM2G462325 (19083049 - 19101243). It is involved in a protein processing pathway in the ER (pathway zma04141). It is dolichyl-diphosphooligosaccharide--protein glycosyltransferase
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+GRMZM2G462325 <- MMM7[MMM7$ps > 19083049 & MMM7$ps < 19101243, ]
+gene <- as.character(GRMZM2G462325$rs)
+
+manhattan(subset(MMM.assoc, chr == 7), chr="chr", snp="rs", bp="ps", p="p_score", main=MMM, highlight = gene)
 ```
 

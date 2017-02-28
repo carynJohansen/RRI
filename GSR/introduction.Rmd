@@ -1,0 +1,73 @@
+---
+title: "Introduction"
+author: "Caryn Johansen"
+date: "2/15/2017"
+output: html_document
+---
+
+The question
+What groups of genes contribute to quantitiative traits?
+How does selection on quantitative traits act on gene clusters?
+Can we see selection acting on gene clusters?
+
+Why the question is important, and why my choice of organism is a good choice
+
+- lots of genetic diversity in maize
+- history of selection (breeding) to increase yield
+- inbred lines have a wide range of phenotypes (I actually don't know what inbred lines are. JRI said that some of the 
+    inbred lines are actually poor performers)
+    
+The methods used:
+
+WGCNA - why it's good, what it does
+What a gene module means
+
+GWAS
+	- definition: a genome wide association study is performed with the purpose of finding SNPs that are
+		are associated with a specific trait
+	This is valuable, because when looking at an array of agronomically valuable traits, it is useful to 
+	find the genes associated with variation of those traits. GWAS can be performed numerous ways, but 
+	in the end, a significant locus identified by the GWA indicated that a SNP there has some significant 
+	impact on the population.
+	To perform this analysis, I used GEMMA (cite), which uses relatedness matrices as a fixed effect to 
+	correct for population structure within the sample set.
+
+eQTL
+	- definition
+	- what it signifies/meaning of an eQTL
+
+Qx
+	- definition
+	- what Qx signifies
+
+Some population genetics theory here, on selection on rare alleles, and effect size of rare alleles,
+and what role that plays.
+And on how relatedness/population strtucture can influence the output of GWAS.
+
+Combining methods
+	
+	what using the eigen values from the WGCNA would mean for a GWAS
+	What using the eigen valyes from the WGCNA would mean for the eQTL
+	How you can use these to examine selection
+
+	The need for careful interpretation, and how you could misinterpret the results
+
+Defining the population used
+	Wisconsin diversity panel, which has previded phenotypes and expression data
+	Panzea GBS genome genotype data
+		version 2.7
+		aligned to maize genome version 4
+
+Aims of the project
+
+implications of this research project, and broader goals
+The role of accurately predicting traits based on genomic information is quickly become an important
+field in plant science. Both genomic data has become easier and less expensive to collect, and high throughput
+phenotype data is a growing field of research. As we decrease the granularity of the traits we can collect,
+we can do more and more prediction with our increased amount of genomic data. The prediction will
+be able to become more powerful and robust as we collect data for more samples.
+But models need to take into account many complexities that make association difficult
+in biology. Relatedness between individuals is a major confounding factor, as population structure 
+alone can make a trait seem significant when it might actually not be.
+
+
