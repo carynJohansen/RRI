@@ -5,8 +5,32 @@ date: "2/15/2017"
 output: html_document
 ---
 
+In humans....
+
+Role of genetic variation in plants
+
+Genetic variation plays an important role in crop species, and knowledge of quantitative traits can be used
+for breeders to select for or design crop varieties better suited to their environments or with desirable traits.
+
+The process of domestication did reduce the amount of diversity within crop species, but 
+
+There is also still a lot unknown about the selective forces acting on quantitative traits, and how
+those forces have shaped genetic architecture. (Here, genetic achitecture is expression, gene clustering, regulatory mechanisms)
+In addition, it is unclear what role genetic architecture has in how traits are selection.
+
+What are the selective forces on expression, and how can expression of genes be used to measure selection?
+
+The domesticated crop _Zea mays_ is a plant genomics system that presents itself as a good oportunity for studying selection
+on quantitative traits, and on studying the role of genomic architecture in evolutionary forces. 
+
+
+Here, we want to use maize inbred lines to investigate the robustness and power of the approach of combining expression data and sequencing 
+data to look for signature of selection on quantitative traits. Exploring methods to accurately associate quantitative traits with causal loci
+would be helpful for plant biology research, and for developing crops to meet the challenges of climate change and increased demand.
+
 The question
-What groups of genes contribute to quantitiative traits?
+In maize, what groups of genes contribute to quantitiative traits?
+
 How does selection on quantitative traits act on gene clusters?
 Can we see selection acting on gene clusters?
 
@@ -31,6 +55,12 @@ GWAS
 	impact on the population.
 	To perform this analysis, I used GEMMA (cite), which uses relatedness matrices as a fixed effect to 
 	correct for population structure within the sample set.
+	
+	Common pitfalls of GWAS include bias in allele frequency and effect sizes detected, genomic context, allelic heterozygosity,
+	detecting polygenic adaptation, among others. 
+	
+	Careful experimental design and specific statistical methods can be employed to address some of these challenges. Permuting and subsampling
+	the data clearly account for 
 
 eQTL
 	- definition

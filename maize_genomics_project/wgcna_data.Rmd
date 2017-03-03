@@ -28,6 +28,8 @@ load("data/wgcna_gwas_output/maize361-networkConstruction-stepByStep.RData")
 
 exp <- read.table("../Hirsch_correlations/data/processed/maize_503genotypes_FPKM_expressed.txt", header=T)
 #write.table(expdata503_names, file="maize_503Exp_originalNames.txt", sep="\n", quote=F, row.names = F)
+
+genotype <- read.table("data/ZeaGBSv27_s_vF.bimbam", sep=",")
 ```
 
 #Data processing
@@ -88,6 +90,7 @@ Run GWAS without the maize lines with a high frequency of missing data. Remember
 
 ```{r, fig.show='hold', fig.width=12, fig.height=8}
 library(reshape2)
+library(zoo)
 a_freq <- read.table("ZEAGBSv27_s_F_freq.csv", sep=",", header=T)
 a_freq <- a_freq[,-c(9:16)]
 
@@ -96,10 +99,41 @@ af <- a_freq[,c(1,2,6,8)]
 afl <- reshape(af, varying=c("A1_FREQ","A2_FREQ"), 
                idvar=c("CHROM", "POS"), v.names="FREQ", times=c("A1_FREQ", "A2_FREQ"), direction = "long")
 afl$time <- as.factor(afl$time)
-afl_chr1 <- afl[afl$CHROM == 1,]
 
-ggplot(afl_chr1, aes(x=POS, y=FREQ, colour=time) ) +
+afl_chr1_A1 <- afl[afl$time == "A1_FREQ" & afl$CHROM == 1,]
+afl_chr1_A2 <- afl[afl$time == "A2_FREQ" & afl$CHROM == 1,]
+
+afl_chr1_A1_roll <- rollmean(afl_chr1_A1$FREQ,k=1000)
+afl_chr1_A2_roll <- rollmean(afl_chr1_A2$FREQ, k=1000)
+
+afl_chr1 <- data.frame(POS=seq(1:length(afl_chr1_A1_roll)), ALLELE=rep("A1", length(afl_chr1_A1_roll)), ROLL_FREQ=afl_chr1_A1_roll)
+
+a2_chr <- data.frame(POS=seq(1:length(afl_chr1_A2_roll)),ALLELE=rep("A2", length(afl_chr1_A2_roll)), ROLL_FREQ=afl_chr1_A2_roll)
+
+afl_chr1 <- rbind(afl_chr1, a2_chr)
+
+#afl_roll <- cbind(afl_A1_roll, afl_A2_roll)
+
+ggplot(afl_chr1, aes(x=POS, y=ROLL_FREQ, colour=as.factor(ALLELE)) ) +
   geom_line()
+
+ggplot(afl, aes(x=POS, y=FREQ, colour=as.factor(time))) + geom_line()
+
+```
+
+
+```{r}
+hist(a_freq$A1_FREQ, main = "Major Allele Frequency")
+min(a_freq$A1_FREQ)
+a_freq[a_freq$A1_FREQ == min(a_freq$A1_FREQ),]
+```
+
+Minor Allele Frequency
+
+```{r}
+hist(a_freq$A2_FREQ, main="Minor Allele Frequency", freq=T)
+ggplot(a_freq, aes(A2_FREQ)) + geom_density(aes(y=..scaled..)) + 
+  labs(title = "Minor Allele Site Frequency Spectrum", x= "Minor Allele Frequency", y = "Density of AF")
 ```
 
 
@@ -173,7 +207,7 @@ manhattan(subset(blue.assoc, chr == 10), chr="chr", snp="rs", bp="ps", p="p_scor
 qq(blue.assoc$p_score, main=paste(blueM, "Q-Q plot of GWAS p-values", sep="\n"))
 ```
 
-Midnight Blue Module
+###Midnight Blue Module
 
 ```{r, fig.show='hold', fig.width=12, fig.height=8}
 MMM <- mods[4]
@@ -201,4 +235,50 @@ gene <- as.character(GRMZM2G462325$rs)
 
 manhattan(subset(MMM.assoc, chr == 7), chr="chr", snp="rs", bp="ps", p="p_score", main=MMM, highlight = gene)
 ```
+
+alleles at peak:
+
+```{r}
+qtl_af <- genotype[genotype$V1 == "S7_19083746",]
+```
+
+
+###Turquoise
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+turq <- mods[8]
+turq
+
+turq.assoc <- read.table("data/wgcna_gwas_output/MEturquoise/output/ZeaGBSv27_MEturquoise.assoc.txt", header=T)
+
+turq.assoc$chr <- as.numeric(as.integer(turq.assoc$chr))
+
+turq_high <- turq.assoc[turq.assoc$p_score < 0.0001,]
+soi <- turq_high$rs
+
+manhattan(turq.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=turq, highlight = soi)
+#manhattan(subset(turq.assoc, chr == 7), chr="chr", snp="rs", bp="ps", p="p_score", main=turq, highlight = soi)
+qq(turq.assoc$p_score, main=paste(turq, "Q-Q plot of GWAS p-values", sep="\n"))
+```
+
+Peaks in Chr 3: 
+GRMZM2G409514 (222004484 - 222004684)
+AC210422.3_FG011 (222004584 - )
+GRMZM2G011608 (start - end: 230740989 - 230747356)
+
+```{r}
+turq3 <- turq.assoc[turq.assoc$chr == 3,]
+GRMZM2G011608 <- turq3[turq3$ps >= 230740989 & turq3$ps <= 230747356, ]
+
+GRMZM2G409514 <- turq3[turq3$ps >= 222004484 & turq3$ps <= 222004684,]
+
+soi <- c(as.character(GRMZM2G011608$rs), as.character(GRMZM2G409514$rs))
+soi
+
+manhattan(turq3, chr="chr", snp="rs", bp="ps", p="p_score", main=turq, highlight = soi)
+```
+
+
+
+# Modules and their Genes
 

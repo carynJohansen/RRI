@@ -68,6 +68,9 @@ lmiss <- read.table("data/lowerFreq/ZeaGBSv27_sf_vcfInfo.lmiss", sep="\t", heade
 hist(lmiss$F_MISS)
 max(lmiss$F_MISS)
 
+#number of missing data with >20%
+nrow(lmiss[lmiss$F_MISS > 0.2,])
+
 imiss <- read.table("data/lowerFreq/ZeaGBSv27_sf_vcfInfo.imiss", sep="\t", header=T)
 hist(imiss$F_MISS)
 max(imiss$F_MISS)
