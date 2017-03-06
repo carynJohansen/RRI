@@ -15,14 +15,29 @@ Relevance
 	Plant Research - it's unclear how the genetic architecture underlying quantitative traits responds to 
 	selection in plant populations [Josephs et al], clarifying this will be good.
 
+	Genomic data is less expensive to generate, and is being generated in abundance. Developing methods to sift signals from 
+	the genomic noise defines the usefulness of the data generated. Agriculture is [citation] begin to utilize data science to 
+	target desirable traits, either for genetic engineering, or for targeted breeding [genomic prediction?]. Developing methods
+	that advance methods of analysis, and for identifying the co
+
+	[I'm not sure what I want from this paragraph. That more data means more information? That more data *can* mean better understanding.]
+	[as is, this paragraph sounds like I'm describing a totally different project.]
+	With the amount of data being generated, the amount of complexity plant scientists are able to analyze increases. Plant development,
+	biochemistry, and physiology are complicated networks of interactions: gene-gene, gene-environment, phenotype-environment. Molecular
+	genetics has been able to characterize many key genetic pathways and their physiological traits, but often scientists are able to capture
+	only a snapshot of the genetic dynamics. For example, Nagano et al showed that gene expression dynamics increases in complexity in a
+	field environment compared to a well-controlled greenhouse experiment, but also in predictable ways. To generate robust models for the 
+	prediction of gene expression, Nagano et al combined transcriptome data from hundreds of samples with meteorological data, with 14 different
+	regression models to deescribe .
+
 Concepts to introduce
 
 	Quantitative trait
 	Selection
-	Population - in maize specifically
+	Populations - in maize specifically
 	QWAS
 	Qx
-	effect size and direction
+		effect size and direction
 
 #########
 Goals and Objectives
@@ -31,53 +46,76 @@ Goals and Objectives
 	- GWAS
 2. Characterize the genetic architecture underlying gene co-expression modules
 	- unpack the modules and compare eigen GWAS with eQTL for genes in module
-3. Calculate signatures of selection on the quantitative traits
-4. Design maize common garden experiments for Mexico landraces (or data from landraces) that show adaptation to environmental stresses (Highland maize project)
-OR
-4. Questions about how gene expression can be used as a phenotype for genetic studies [a la Nango et al.]
+3. Calculate adaption of polygenic traits among populations sampled
+4. Some other idea
+
 
 #########
 Project Outline
 
 Data used: 
 	Hirsch et al.
-		- X number of maize lines from Y population groups
-		- Phenotype data
+		- 705 number of maize lines from 14 population groups
+		- Expression data from 507 lines of maize
+			- RNA-Seq data
+			Filtering: only analyzed genes with expression in each line of maize, and after filtering for expression there was transcriptome 
+			data for
+		- Phenotype data for 714 maize lines.
+
 	Panzea
 		- GBS dat, maize genome version 3
+		- 17K lines of maize
+		Filtering:
+			- removed lines of maize that had more than 40% missing data (could be higher)
+			- included only lines of maize we had transcriptome and phenotype data for
+
+	We used maize lines that were included in all three data sources. In addition, we filtered the transcriptome data for genes that expressed
+	across all maize lines, and 
+	After filtering data, the following analysis was done on
+		- 316 lines of maize
+		- with transcriptome data for 48136 genes
+		- 125,210 SNPs (genome wide)
+
+
 
 Programs and tools used:
 	WGCNA
+		- brief description of process
+		- eigengene
 	GEMMA
+		- regression model information
+		- description of process
 
-1. GWAS for traits measured 
-	- # of SNPs analyzed
-	- results of this:
-		- any specific trait that has any nice peak
-
-2. WGCNA Modules
-	- about the modules 
-		- X number of modules, with the range of Y-Z genes in each module
-	- GWAS on the eigen genes of the modules
-		- Figure 1 for one of the modules
-3. eQTL on expression data of genes
-	- X number of genes
-	- comparing genes within module to the module eigengene GWAS results (Figure 1)
 
 #########
 Project Progress
 
-Figure 1
+1. GWAS for traits measured
+	12 traits
+	With 125K SNPs, looked for QTL associated with 13 traits.
 
-Diversity Panel lines
-	- population strucutre, # of 
+	Results:
+		- identified X significant QTL, with the range per trait is X-X per trait
+		- Y% of these QTL have at least one gene within 1kb of the peak
 
-Calculated GWAS for 12 traits for which there was phenotypic data.
-	- saw X-X range of number of peaks, of which Y% has genes within Zkb
+2.a. WGCNA Modules
+	- about the modules:
+		- 13 modules, with the range of Y-Z genes in each module
+	- GWAS on the eigengenes of the modules
+		- eigengene is the first principle component of the expression data of the genes within the module
 
-Another graduate student created WGCNA modules
-	- 13 modules
-	- with X-Y range of genes per module
+2.b. eQTL on expression data of genes
+	- 48,136 number of genes [this is not the rigth number, I thought it was 15K]
+	- comparing genes within module to the module eigengene GWAS results (Figure 1)
+	- cis and trans effects of SNPs on module eigengenes
+
+Figure 1: this figure includes results from Aim 2.
+	a module GWAS results (midnight blue module?), with some genes from within the module and their QTL
+
+
+3. Next step, Qx statistic [Berg and Coop]
+	- use the top QTL from a GWAS to look for adaptation among populations for that trait, or on those genes.
+	- am I using QTL from WGCNA or from trait GWAS?
 
 
 #########
@@ -96,11 +134,13 @@ Characterize the usefulness of this approach
 	- is it accurate?
 	- what is the possible false-positive rate [why does Qx not create false positives again?]
 
-Explore how expression data can be used as a quantitative trait.
+
 
 #########
-Citation
+Citations
 
 EmJo's paper
 Hirshc et al
 Berg and Coop
+GEMMA paper
+WGCNA paper
