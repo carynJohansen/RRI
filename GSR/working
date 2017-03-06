@@ -1,0 +1,106 @@
+#########
+Introduction
+#########
+Relevance and Justificiation
+
+Problem:
+	Plant quantitative traits are important to both plants and humans
+	The genomic architecture underlying quantitative tratis is difficult to study
+
+Relevance
+	Studying and characterizing quantitatvive traits will be valuable to both breeders
+	of crops, and to scientists studying natural plant populations.
+	Breeders - many traits breeders value in crops are quantitative, and clearly understanding the 
+	genetic architecture may (has?) enhanced the effectivness and effeciency of breeding programs.
+	Plant Research - it's unclear how the genetic architecture underlying quantitative traits responds to 
+	selection in plant populations [Josephs et al], clarifying this will be good.
+
+Concepts to introduce
+
+	Quantitative trait
+	Selection
+	Population - in maize specifically
+	QWAS
+	Qx
+	effect size and direction
+
+#########
+Goals and Objectives
+
+1. Characterize the genetic architecture underlying traits from Hirsch et al.
+	- GWAS
+2. Characterize the genetic architecture underlying gene co-expression modules
+	- unpack the modules and compare eigen GWAS with eQTL for genes in module
+3. Calculate signatures of selection on the quantitative traits
+4. Design maize common garden experiments for Mexico landraces (or data from landraces) that show adaptation to environmental stresses (Highland maize project)
+OR
+4. Questions about how gene expression can be used as a phenotype for genetic studies [a la Nango et al.]
+
+#########
+Project Outline
+
+Data used: 
+	Hirsch et al.
+		- X number of maize lines from Y population groups
+		- Phenotype data
+	Panzea
+		- GBS dat, maize genome version 3
+
+Programs and tools used:
+	WGCNA
+	GEMMA
+
+1. GWAS for traits measured 
+	- # of SNPs analyzed
+	- results of this:
+		- any specific trait that has any nice peak
+
+2. WGCNA Modules
+	- about the modules 
+		- X number of modules, with the range of Y-Z genes in each module
+	- GWAS on the eigen genes of the modules
+		- Figure 1 for one of the modules
+3. eQTL on expression data of genes
+	- X number of genes
+	- comparing genes within module to the module eigengene GWAS results (Figure 1)
+
+#########
+Project Progress
+
+Figure 1
+
+Diversity Panel lines
+	- population strucutre, # of 
+
+Calculated GWAS for 12 traits for which there was phenotypic data.
+	- saw X-X range of number of peaks, of which Y% has genes within Zkb
+
+Another graduate student created WGCNA modules
+	- 13 modules
+	- with X-Y range of genes per module
+
+
+#########
+Next Steps and Future Plans
+
+Measures of selection
+	- from the GWAS on traits (or on modules), select the top X SNPs from the GWAS
+	- get the direction of the effect
+	- calculate Qx
+
+Plans for how this can incorporate with the highland project
+	- using data gathered from the maize highland project,
+		look for maize selection to stressful environmental conditions
+
+Characterize the usefulness of this approach
+	- is it accurate?
+	- what is the possible false-positive rate [why does Qx not create false positives again?]
+
+Explore how expression data can be used as a quantitative trait.
+
+#########
+Citation
+
+EmJo's paper
+Hirshc et al
+Berg and Coop

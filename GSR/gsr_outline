@@ -1,8 +1,3 @@
----
-title: "R Notebook"
-output: html_notebook
----
-
 Department of Plant Science - Departmental Graduate Student Research Assistantships
 
 Due date: March 15, 2017 
@@ -118,21 +113,91 @@ Major questions:
 - expression as a quantitative trait
   - gene expression as an understudied trait
 - linking gene expression to traits of interest
+- expanding this to selection in the context of stress - is someone in Jeff's lab already doing this?
 
+=================
+Introduction
+
+=================
 Relevance and justification - why project relevant to mission of Dept Plant Sciences
 
-- quantitative traits remain difficult to parse out, despite the increase of genomic data
-- but most of the traits that humans find valuable in plants, and many of the traits that matter for the plant, are quantitative traits
+- most of the traits that humans find valuable in plants, and many of the traits that matter for the plant, are quantitative traits
   - examples: crop yield, leaf shape
+- quantitative traits remain difficult to parse out, despite the increase of genomic data
+  - examples: 
   
-determining both the underlying genetic architecture of the quantitative traits, and in the selective forces that shape those traits remains challenging.
+determining both the underlying genetic architecture of the quantitative traits, and in the selective forces that shape those traits remains
+ challenging.
 
-In addition, modern genomic methods have made considering gene expression a quantifyable phenotypic trait, though the link between gene expression 
+In the broader scheme of plants, exstablishing methods to robustly measure the genetic architecture behind quantitative traits would be beneficial 
+to agriculture, and to understaning how evolutionary forces act on plant populations, and how plant genomes respond to the environment.
+  - plant develippment, physiology, and biochemistry
+  - polygenic local adaptation: the subtle shifts in allele frequency of many loci.
+
+Modern genomic methods have made considering gene expression a quantifiable phenotypic trait, though the link between gene expression 
 and traits in plants has yet to be fully elucidated.
 
-My interests are in the quantitative traits in crops, and exploring methods to 
+Genome wide association studies (GWAS) are used to establish association between a trait and a genomic marker, often a signle
+nucleotide polymorphism, and are used in almost all fields of biological research. In humans, they have been used successfully to 
+identify genomic markers associated with disease risk and other traits [Sanjak]. In plants, GWAS have found association between 
+important traits and their geentic markers. For example....
+
+However, quantitative traits remain difficult to link to the full spectrum of impactful genes. 
+
+My interests are in the quantitative traits in crops, and measuring how traits 
+
+harnessing the large amounts of genomic data available to elucidate otherwise unknown genomic architecture behind traits
+
+many small effects, many polygenic traits that the plant scientific community has not been able to clarify
+  - examples....
+
+GxG interactions, cis and trans effects
+
+Maize genetic history
+  - domestication
+  - genome duplication? [not sure this is important information for me]
+  - local adaptation
+
+====================
+
+Goals and Objectives
+
+The goal of the project is to elucidate the genetic architecture of quantitative traits in populations of maize. 
+
+Local adaptation - selection causes traits in one population to diverge from a trait value shared among populations. In plants, many
+of the traits acted up by selection are quantitative traits.
+
+the field is beginning to 
+characterize the complexity of genetic networks
+
+Gene expression clusters have been used to help find relationships betweem polygenic traits and the
+
+
+
+To study the maize transcriptome dynamics and use transcriptome data to draw conclusions about selection of quantitative traits, 
+
+and to predict dyanmics in field conditions.
+
+
+- Find QTL assocaited with traits
+- Find eQTL - SNPs associated with the expression of genes
+- reduce dimension of data by clustering genes by expression patterns using WGCNA
+- find QTL associated with gene modules
+  - go into detail on the genes within a module
+- calculated the covariance of QTL alllele frequency and direction QTL effects to detect local, polygenic adaptation
+
+
+Figure 1. QTL associated with traits?
+OR just Figure of GWAS of module and GWAS of genes win module.
+
+This project will show the genomic architecture of quantitative traits important to agriculture, and will also address
+how selection has shaped teh variation within the maize lines studied.
+
+[but... this]
 
 Current Project Outline
+
+I've begun to answer these questions using publically available data. 
 
 Used publically available data. Wisconsin diversity panel that measured a number of traits in 705 inbred maize lines [cite],
 as well as RNA-Seq expression data from [number of overlap] of those lines [cite]. 
@@ -140,7 +205,24 @@ as well as RNA-Seq expression data from [number of overlap] of those lines [cite
 We also used publically available genotype data from Panzea [cite] with genome by sequencing data for more than 17,000 maize lines,
 of which [number] of the maize lines I had expression data for were represented.
 
+Part 1: Genetic Architecture underlying traits
+Part 2: Transcriptome architecture 
+  - reduction of dimensions for data
+Part 3: Signatures of selection on quantitative traits
+  - Qx [berg and coop]
+Part 4: 
+
+
+====================
 Next Steps and Future Plans
+
+If successful, this project will be expanded on to use the data from landraces in maize that are adapted to specific environments, to 
+elucidate the genetic architecutre and the selection on the genetic architecture that underlys the local adaptation.
 
 Outreach and Learning
 
+====================
+Citations:
+
+Hansey et al. 2010. Genetic Diversity of a Maize Association Population with Restricted Phenology. Crop Science 51(2): 704-715. 
+doi:10.2135/cropsci2010.03.0178
