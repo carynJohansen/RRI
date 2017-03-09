@@ -26,7 +26,7 @@ load expression data
 load("data/wgcna_gwas_output/line_names_361.RData")
 load("data/wgcna_gwas_output/maize361-networkConstruction-stepByStep.RData")
 
-exp <- read.table("../Hirsch_correlations/data/processed/maize_503genotypes_FPKM_expressed.txt", header=T)
+#exp <- read.table("../Hirsch_correlations/data/processed/maize_503genotypes_FPKM_expressed.txt", header=T)
 #write.table(expdata503_names, file="maize_503Exp_originalNames.txt", sep="\n", quote=F, row.names = F)
 
 genotype <- read.table("data/ZeaGBSv27_s_vF.bimbam", sep=",")
@@ -50,7 +50,7 @@ Used compared vcftools to tassel minor allele frequency filtering:
 
 Missing data by locus:
 
-```{r}
+```{r, eval=F}
 vcf_lmiss <- read.table("data/wgcna_gwas_output/ZeaGBSv27_sF_vcfInfo.lmiss", header = T)
 tassel_lmiss <- read.table("data/wgcna_gwas_output/ZeaGBSv27_stF_vcfInfo.lmiss", header=T)
 
@@ -65,7 +65,7 @@ hist(tassel_lmiss$F_MISS, main="tassel filtered")
 By locus, vcftools filtered more than tassel did.
 
 Missing data by locus:
-```{r}
+```{r, eval=F}
 vcf_imiss <- read.table("data/wgcna_gwas_output/ZeaGBSv27_sF_vcfInfo.imiss", header = T)
 tassel_imiss <- read.table("data/wgcna_gwas_output/ZeaGBSv27_stF_vcfInfo.imiss", header=T)
 
@@ -88,7 +88,7 @@ Run GWAS without the maize lines with a high frequency of missing data. Remember
 
 ##Site Frequency Spectrum
 
-```{r, fig.show='hold', fig.width=12, fig.height=8}
+```{r, fig.show='hold', fig.width=12, fig.height=8, eval=F}
 library(reshape2)
 library(zoo)
 a_freq <- read.table("ZEAGBSv27_s_F_freq.csv", sep=",", header=T)
@@ -122,7 +122,7 @@ ggplot(afl, aes(x=POS, y=FREQ, colour=as.factor(time))) + geom_line()
 ```
 
 
-```{r}
+```{r,, eval=F}
 hist(a_freq$A1_FREQ, main = "Major Allele Frequency")
 min(a_freq$A1_FREQ)
 a_freq[a_freq$A1_FREQ == min(a_freq$A1_FREQ),]
@@ -130,7 +130,7 @@ a_freq[a_freq$A1_FREQ == min(a_freq$A1_FREQ),]
 
 Minor Allele Frequency
 
-```{r}
+```{r, eval=F}
 hist(a_freq$A2_FREQ, main="Minor Allele Frequency", freq=T)
 ggplot(a_freq, aes(A2_FREQ)) + geom_density(aes(y=..scaled..)) + 
   labs(title = "Minor Allele Site Frequency Spectrum", x= "Minor Allele Frequency", y = "Density of AF")

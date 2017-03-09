@@ -106,11 +106,11 @@ reran the pipeline.)
 Filter with vcftools --maf 0.01:
 
 ```{r}
-imiss <- read.table("data/trait_gwas_output/ZeaGBSv27_s_vcfInfo.imiss", sep="\t", header=T)
-lmiss <- read.table("data/trait_gwas_output/ZeaGBSv27_s_vcfInfo.lmiss", sep="\t", header=T)
-hist(imiss$F_MISS, breaks = 20, main = "Frequency of Misisng Data in Individuals")
-hist(lmiss$F_MISS, breaks=20, main="Frequency of Missing Data in Loci")
-(max(lmiss$F_MISS))
+#imiss <- read.table("data/trait_gwas_output/ZeaGBSv27_s_vcfInfo.imiss", sep="\t", header=T)
+#lmiss <- read.table("data/trait_gwas_output/ZeaGBSv27_s_vcfInfo.lmiss", sep="\t", header=T)
+#hist(imiss$F_MISS, breaks = 20, main = "Frequency of Misisng Data in Individuals")
+#hist(lmiss$F_MISS, breaks=20, main="Frequency of Missing Data in Loci")
+#(max(lmiss$F_MISS))
 ```
 
 ###Site frequency spectrum
@@ -182,12 +182,12 @@ for (i in 1:length(traits)) {
   t <- as.character(traits[1,i])
   
   # trait GWAS with maize lines with high freq missing
-  gwas_path <- paste(paste("data/lowerFreq/", t, sep=""), "/", sep="")
+  #gwas_path <- paste(paste("data/lowerFreq/", t, sep=""), "/", sep="")
   
-  assoc_file <- paste(paste("output/ZeaGBSv27_", t, sep=""), ".assoc.txt", sep="")
-  print(paste(gwas_path, assoc_file, sep=""))
-  assoc <- read.table(paste(gwas_path, assoc_file, sep=""), sep="\t", header=T)
-  print(dim(assoc))
+  #assoc_file <- paste(paste("output/ZeaGBSv27_", t, sep=""), ".assoc.txt", sep="")
+  #print(paste(gwas_path, assoc_file, sep=""))
+  #assoc <- read.table(paste(gwas_path, assoc_file, sep=""), sep="\t", header=T)
+  #print(dim(assoc))
   
   # trait GWAS with the individiduals with high freq missing data removed
   gwas_rm <- paste(paste("data/trait_gwas_output/", t, sep=""), "/", sep="")
@@ -196,11 +196,11 @@ for (i in 1:length(traits)) {
   assoc2 <- read.table(paste(gwas_rm, rm_assoc_file, sep=""), sep="\t", header=T)
   
   #dev.off()
-  par(mfrow=c(2,2), las=1)
-  manhattan(assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=t)
-  qq(assoc$p_score, main=paste(t, "Q-Q plot of GWAS p-values", sep="\n"))
-  manhattan(assoc2, chr="chr", snp="rs", bp="ps", p="p_score", main=paste(t, "high freq missing removed", sep="\n"))
-  qq(assoc2$p_score, main=paste(t, "Q-Q plot of GWAS p-values\nHigh Freq missing removed", sep="\n"))
+  #par(mfrow=c(2,2), las=1)
+  #manhattan(assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=t)
+  #qq(assoc$p_score, main=paste(t, "Q-Q plot of GWAS p-values", sep="\n"))
+  manhattan(assoc2, chr="chr", snp="rs", bp="ps", p="p_score", main=t)
+  qq(assoc2$p_score, main=paste(t, "Q-Q plot of GWAS p-values", sep="\n"))
 }
 ```
 
