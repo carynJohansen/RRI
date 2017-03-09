@@ -1,138 +1,154 @@
 #########
 Introduction
-#########
-Relevance and Justificiation
+Relevance and Justification
+
+Many traits in plants that are important to both humans and to plant populations are quantitative traits, i.e. they have multiple, sometimes are large number of genes controlling that trait. Plant traits such as yield, height, and stem thickness, are quantitative. 
+
+Certain large effect genes have been identified that played important roles for the selection by humans during domestication, and other traits breed upon ma
+
+A widely used approach to gene discovery for quantitative traits is a top-down approach. This method begins with phenotype data, and associates possibly causative regions of the genome to those traits, using genome wide association (GWA) methods. A list of candidate genes can be generated from these regions, known as quantitative trait loci (QTL). These candidate loci can be then used for further analysis for a variety of questions, such as functional validation or for population genetics analysis. 
+
+However, detecting all contributing genes to the quantitative trait is difficult. Confounding factors of a GWAS analysis include environmental impacts, sample size, quality of genetic information, amount of SNPs used, and others. In addition, there are several statistical challenges to identifying causal QTL. In a GWAS, there is more power to detect common alleles, and alleles with large effect sizes, and this will cause an “overestimation of the average effect size and frequecny of GWAS-associated alleles” (Josephs et al. 2017). In addition, there can be an excess in false positives from low-frequency alleles if the original phenotype data is skewed (Jospehs et al. 2017). A limited sample size can underestimate the number of QTLs affecting a trait due to multiple loci being misidentified as a single QTL with a large effect (Josephs et al. 2017).
+The loci discovered using this method may not represent all involved loci.
+
+Certain traits that may have been thought to be driven by one or a small number of genes cannot fully explain the heritability of that trait. One example is the gene teosinte branched (tb1), which has been identified as the major causal gene behind apical dominance in domesticated maize, a trait thought to be crucial to the domestication of maize.
+
+It is important to develop methods to accurately detect small-effect QTL. Discovering the loci underlying plant traits is important to both breeders and crop breeding programs, and to further elucidating plant genetic networks, plant physiology, and plant evolution.
+
+And something about selection on traits.
+
+Something about data in aggregate. As more genetic and phenotypic data becomes available, the more advanced 
+
+
+In this project, I aim to investigate method of reducing genetic information to facilitate the characterization of plant quantitative trait loci underlying traits under selection. I aim to leverage publicly available data and methods of data dimension reduction to better identify small effect loci.
 
 Problem:
-	Plant quantitative traits are important to both plants and humans
-	The genomic architecture underlying quantitative tratis is difficult to study
+    Plant quantitative traits are important to both plants and humans
+    
+    The genomic architecture underlying quantitative traits is difficult to study
 
 Relevance
-	Studying and characterizing quantitatvive traits will be valuable to both breeders
-	of crops, and to scientists studying natural plant populations.
-	Breeders - many traits breeders value in crops are quantitative, and clearly understanding the 
-	genetic architecture may (has?) enhanced the effectivness and effeciency of breeding programs.
-	Plant Research - it's unclear how the genetic architecture underlying quantitative traits responds to 
-	selection in plant populations [Josephs et al], clarifying this will be good.
+    Studying and characterizing quantitative traits will be valuable to both breeders of crops, and to scientists studying natural plant populations.
+    Breeders - many traits breeders value in crops are quantitative, and clearly understanding the genetic architecture may (has?) enhanced the effectiveness and efficiency of breeding programs.
+    Plant Research - it's unclear how the genetic architecture underlying quantitative traits respond to selection in plant populations [Josephs et al], clarifying this will be good.
 
-	Genomic data is less expensive to generate, and is being generated in abundance. Developing methods to sift signals from 
-	the genomic noise defines the usefulness of the data generated. Agriculture is [citation] begin to utilize data science to 
-	target desirable traits, either for genetic engineering, or for targeted breeding [genomic prediction?]. Developing methods
-	that advance methods of analysis, and for identifying the co
+Genomic data is less expensive to generate, and is being generated in abundance. Developing methods to sift signals from the genomic noise defines the usefulness of the data generated. Agriculture is begin to utilize data science to target desirable traits [citation?], either for genetic engineering, or for targeted breeding [genomic prediction?]. 
 
-	[I'm not sure what I want from this paragraph. That more data means more information? That more data *can* mean better understanding.]
-	[as is, this paragraph sounds like I'm describing a totally different project.]
-	With the amount of data being generated, the amount of complexity plant scientists are able to analyze increases. Plant development,
-	biochemistry, and physiology are complicated networks of interactions: gene-gene, gene-environment, phenotype-environment. Molecular
-	genetics has been able to characterize many key genetic pathways and their physiological traits, but often scientists are able to capture
-	only a snapshot of the genetic dynamics. For example, Nagano et al showed that gene expression dynamics increases in complexity in a
-	field environment compared to a well-controlled greenhouse experiment, but also in predictable ways. To generate robust models for the 
-	prediction of gene expression, Nagano et al combined transcriptome data from hundreds of samples with meteorological data, with 14 different
-	regression models to deescribe .
+[I was trying to say something here about how the more data is generated, the deeper we can analyze the complexity. Or that we are beginning to understand and characterize the complexity of a plant organism or population, but it’s only the beginning, and it’s a hard but not impossible problem to a certain extent. Before large amounts of genomic data was available, a project like this would have been impossible.]
 
 Concepts to introduce
 
-	Quantitative trait
-	Selection
-	Populations - in maize specifically
-	QWAS
-	Qx
-		effect size and direction
+Top-down approach to candidate gene discovery
+
+    Quantitative trait
+A quantitative trait is a trait with continuous trait values and with multiple genes contributing to the expressed trait. The canonical example of a quantitative trait is human height, but many important plant traits, such as height and yield, are also quantitative.
+    Selection on a population
+    Populations - in maize specifically
+    GWAS
+    Qx
+        effect size and direction
 
 #########
 Goals and Objectives
 
+Here, take a top-down approach to finding candidate genes that may have been important to the selection of certain traits in domesticated maize. This approach has 
+
 1. Characterize the genetic architecture underlying traits from Hirsch et al.
-	- GWAS
+    - GWAS
+    - What is the genetic architecture underlying agronomic traits measured by Hirsch et al?
 2. Characterize the genetic architecture underlying gene co-expression modules
-	- unpack the modules and compare eigen GWAS with eQTL for genes in module
+    - unpack the modules and compare eigen GWAS with eQTL for genes in module
+   - What is the genetic architecture underlying the gene co-expression modules?
+   - How similar are the module eigengenes GWAS with the eQTL of genes within the module?
 3. Calculate adaption of polygenic traits among populations sampled
-4. Some other idea
+   - Is there evidence of local adaptation of those polygenic traits among the populations samples?
+4. Can we use this approach in other populations? Can I use this approach in Mexican maize landrace populations that have been subjected to strong environmental selection on a regional scale?
 
 
 #########
 Project Outline
 
-Data used: 
-	Hirsch et al.
-		- 705 number of maize lines from 14 population groups
-		- Expression data from 507 lines of maize
-			- RNA-Seq data
-			Filtering: only analyzed genes with expression in each line of maize, and after filtering for expression there was transcriptome 
-			data for
-		- Phenotype data for 714 maize lines.
+Starting with gene expression and phenotype data publically available from a maize study performed by Hirsch et al (2015?), and with genome by sequencing data from The Maize Diversity Project (Panzea), the original dataset was filtered based on gene expression and percent missing data. The final analyses were performed with 292 lines of maize (Figure 1), 15,XXX genes, and 125,210 SNPs. [Can I have some measure of coverage in there, or something about quality of the SNPs, citing panzea paper?] These lines of maize represent X different maize families (Figure 1).
 
-	Panzea
-		- GBS dat, maize genome version 3
-		- 17K lines of maize
-		Filtering:
-			- removed lines of maize that had more than 40% missing data (could be higher)
-			- included only lines of maize we had transcriptome and phenotype data for
+Data used:
+    Hirsch et al.
+        - 705 number of maize lines from 14 population groups
+        - Expression data from 507 lines of maize
+            - RNA-Seq data
+            Filtering: only analyzed genes with expression in each line of maize, and after filtering for expression there was transcriptome
+            data for
+        - Phenotype data for 714 maize lines.
 
-	We used maize lines that were included in all three data sources. In addition, we filtered the transcriptome data for genes that expressed
-	across all maize lines, and 
-	After filtering data, the following analysis was done on
-		- 316 lines of maize
-		- with transcriptome data for 48136 genes
-		- 125,210 SNPs (genome wide)
+    Panzea
+        - GBS dat, maize genome version 3
+        - 17K lines of maize
+        Filtering:
+            - removed lines of maize that had more than 40% missing data (could be higher)
+            - included only lines of maize we had transcriptome and phenotype data for
 
-
+    We used maize lines that were included in all three data sources. In addition, we filtered the transcriptome data for genes that expressed
+    across all maize lines, and
+    After filtering data, the following analysis was done on
+        - 316 lines of maize
+        - with transcriptome data for 48136 genes
+        - 125,210 SNPs (genome wide)
 
 Programs and tools used:
-	WGCNA
-		- brief description of process
-		- eigengene
-	GEMMA
-		- regression model information
-		- description of process
+    WGCNA
+        - brief description of process
+        - eigengene
+    GEMMA
+        - regression model information
+        - description of process
 
+
+BaLiSA
 
 #########
 Project Progress
 
 1. GWAS for traits measured
-	12 traits
-	With 125K SNPs, looked for QTL associated with 13 traits.
+    12 traits
+    With 125K SNPs, looked for QTL associated with 13 traits.
 
-	Results:
-		- identified X significant QTL, with the range per trait is X-X per trait
-		- Y% of these QTL have at least one gene within 1kb of the peak
+    Results:
+        - identified X significant QTL, with the range per trait is X-X per trait
+        - Y% of these QTL have at least one gene within 1kb of the peak
 
 2.a. WGCNA Modules
-	- about the modules:
-		- 13 modules, with the range of Y-Z genes in each module
-	- GWAS on the eigengenes of the modules
-		- eigengene is the first principle component of the expression data of the genes within the module
+    - about the modules:
+        - 13 modules, with the range of Y-Z genes in each module
+    - GWAS on the eigengenes of the modules
+        - eigengene is the first principal component of the expression data of the genes within the module
 
 2.b. eQTL on expression data of genes
-	- 48,136 number of genes [this is not the rigth number, I thought it was 15K]
-	- comparing genes within module to the module eigengene GWAS results (Figure 1)
-	- cis and trans effects of SNPs on module eigengenes
+    - 48,136 number of genes [this is not the right number, I thought it was 15K]
+    - comparing genes within module to the module eigengene GWAS results (Figure 1)
+    - cis and trans effects of SNPs on module eigengenes
 
 Figure 1: this figure includes results from Aim 2.
-	a module GWAS results (midnight blue module?), with some genes from within the module and their QTL
-
+    a module GWAS results (midnight blue module looked good), with some genes from within the module and their QTL
 
 3. Next step, Qx statistic [Berg and Coop]
-	- use the top QTL from a GWAS to look for adaptation among populations for that trait, or on those genes.
-	- am I using QTL from WGCNA or from trait GWAS?
+    - use the top QTL from a GWAS to look for adaptation among populations for that trait, or on those genes.
+    - am I using QTL from WGCNA or from trait GWAS?
 
 
 #########
 Next Steps and Future Plans
 
 Measures of selection
-	- from the GWAS on traits (or on modules), select the top X SNPs from the GWAS
-	- get the direction of the effect
-	- calculate Qx
+    - from the GWAS on traits (or on modules), select the top X SNPs from the GWAS
+    - get the direction of the effect
+    - calculate Qx
 
 Plans for how this can incorporate with the highland project
-	- using data gathered from the maize highland project,
-		look for maize selection to stressful environmental conditions
+    - using data gathered from the maize highland project,
+        look for maize selection to stressful environmental conditions
 
 Characterize the usefulness of this approach
-	- is it accurate?
-	- what is the possible false-positive rate [why does Qx not create false positives again?]
+    - is it accurate?
+    - what is the possible false-positive rate [why does Qx not create false positives again?]
 
 
 
@@ -140,7 +156,7 @@ Characterize the usefulness of this approach
 Citations
 
 EmJo's paper
-Hirshc et al
+Hirsch et al (and Hansey et al)
 Berg and Coop
 GEMMA paper
 WGCNA paper
