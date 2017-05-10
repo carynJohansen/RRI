@@ -1,0 +1,658 @@
+---
+title: "Estimating Heritability"
+author: "Caryn Johansen"
+date: "2/27/2017"
+output: html_document
+---
+
+Purpose: This document is mean to to be the workspace for estimating the heritability of traits collected in the Hirsch et al. paper
+
+Citation:
+
+##Heritability
+
+Phenotypic variance is the sum of the genetic component and the environmental component:
+
+$$V_P = V_G + V_E$$
+
+The genetic component is made up of an additive component and a non-additive (or dominance) component:
+
+$$V_P = V_A + V_D + V_E$$
+
+$V_A$ is the component of the phenotypic variability that is transmitted to progeny. We use _heritability_ to measure how much of
+the phenotypic variability of a trait in a given population will be inherited by the progeny of a population. Essentially, it is calculating
+what proportion of the phenotypic variation is attributed to additive genetic variation:
+
+**Narrow sense heritability** is how much of the phenotypic variability is explained by the addititve
+component of the genetic variability.
+
+$$h^2 = \frac{V_A}{V_P}$$
+This value will lie between 0 and 1.
+
+This is defined for a given population at a given time.
+
+**Broad sense heritability** is how much of phenotypic variability is explained by the genetic 
+variability
+
+$$H^2 = \frac{V_G}{V_P}$$
+
+The value will lie between 0 and 1. The closer to one, the more of the phenotype variability is
+explained by the genetic variability.
+
+## Estimating additive variability
+
+estimatine the variance of the kinship matrix is $V_A$ (citation: my notes from last week)
+
+rrblup
+
+gtca - includes partitioning heritability across markers
+
+
+
+## Estimating the phenotypic variability
+
+Load lmer package
+```{r}
+library(lme4)
+library(ggplot2)
+library(lsmeans)
+```
+
+Load the phenotypic data
+
+```{r, eval=F}
+pheno <- read.table("data/processed/WIDIV_2010_paper_phenotypic_data_cleaned.csv", sep=",", header=T, na.strings = ".")
+
+colnames(pheno) <- c("Year", "Rep", "Genotype", colnames(pheno[,4:20]))
+
+str(pheno)
+```
+
+Include the population group data
+
+```{r, eval=F}
+pop <- read.table("data/processed/Supplemental_Table_1_final_c.csv", sep=",", header=T, na.strings = ".")
+pop <- pop[,c(2,5,6)]
+pop$Genotype <- as.character(pop$Genotype)
+pop$Population.Group <- as.factor(as.integer(pop$Population.Group))
+
+table(pop$Population.Group)
+levels(pop$Group)
+table(pop$Group, pop$Population.Group)
+
+ggplot(pop, aes(factor(Group))) + geom_bar() # + geom_jitter(aes(Group))
+```
+
+Add population information to phenotype data
+
+```{r, eval=F}
+pheno <- merge(pheno, pop)
+
+pheno.plot <- pheno[pheno$Year == 2008 & pheno$Rep == 1,]
+
+pheno.plot$Year <- as.factor(as.integer(pheno.plot$Year))
+ggplot(pheno.plot, aes(factor(Group))) + geom_bar() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  xlab("Population Group") + ylab("Count") + ggtitle("Phenotype Data Maize Population Groups")
+ggsave(filename = "output/phenotype_popStructure_bar.png",width = 12, height = 8)
+  
+ggplot(pheno.plot, aes(factor(Population.Group))) + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+List the phenotypes:
+
+```{r, eval=F}
+traits <- colnames(pheno[,c(7:20)])
+traits
+```
+
+#### Save data space
+
+```{r, eval=F}
+save.image("Heritability_Frequency.RData")
+```
+
+#### Begin here
+
+```{r}
+load("Heritability_Frequency.RData")
+
+table(pop$Population.Group)
+
+table(pop$Population.Group, pop$Group)
+```
+
+
+Wisconsin Diversity Panel Phenotypes
+
+| Trait | Explanation/unit |
+| ----- | ---------------- |
+| GDD | days to flowering (growing degree days) |
+| kernel300 | weight of 300 kernels (g) |
+| stalk | stalk diameter (cm) |
+|plant_height | cm |
+|ear_height | cm |
+| leaf_number | number of leaves |
+| stover_yield | $t ha^{-1}$|
+| juvenile | last leaf with epicuticular wax |
+| ear_internode | uppermost internode with developed ear (unit?) |
+| internode_length | cm |
+|internode\_above_ear | number of internodes above uppermost ear |
+| adult | number of leaves with no epicuticular wax |
+|percent_juvenile | percent of leave with epicuticular wax |
+|percentage_adult | percent of leaves with no epicuticular wax |
+
+
+### GDD
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=GDD)) +
+  geom_boxplot(aes(colour=as.factor(Rep))) +
+  geom_jitter(aes(colour=as.factor(Population.Group)))
+
+gdd.lmer <- lmer(GDD ~ (1|Genotype) + Year, data=pheno)
+gdd.lm <- lm(GDD ~ Genotype + Year, data=pheno)
+gdd.lmer
+
+gdd.re <- ranef(gdd.lmer)
+
+line_means = as.data.frame(summary(lsmeans(gdd.lm,~Genotype)))
+plot(gdd.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(gdd.lmer)
+
+vars = as.data.frame(VarCorr(gdd.lmer))
+vars
+gdd.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+gdd.herit
+
+heritability_traits <- data.frame("trait"="GDD", "H^2"=gdd.herit)
+
+```
+
+
+### Stalk
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=stalk)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Stalk")
+#ggplot(pheno.plot, aes(x=Year, y=leaf_number, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = stalk)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group)))
+
+st.lmer <- lmer(stalk ~ (1|Genotype) + Rep:Year, data=pheno)
+st.lm <- lm(stalk ~ Genotype + Rep:Year, data=pheno)
+st.lmer
+
+st.re <- ranef(st.lmer)
+
+line_means = as.data.frame(summary(lsmeans(st.lm,~Genotype)))
+plot(st.re$Genotype[,1],line_means$lsmean);abline(0,1)
+
+par(mfrow=c(3,1))
+hist(st.re$Genotype[,1])
+hist(line_means$lsmean)
+hist(pheno$stalk)
+
+summary(st.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(st.lmer))
+vars
+
+st.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+st.herit
+
+row <- data.frame("trait" ="stalk", "H^2"= st.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Plant Height
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=plant_height)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Plant Height")
+#ggplot(pheno.plot, aes(x=Year, y=plant_height, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = plant_height)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group)))
+
+ph.lmer <- lmer(plant_height ~ (1|Genotype) + Rep:Year, data=pheno)
+ph.lmer
+summary(ph.lmer)
+
+ph.lm <- lm(plant_height ~ Genotype + Rep:Year, data=pheno)
+ph.lmer
+
+ph.re <- ranef(ph.lmer)
+
+
+line_means = as.data.frame(summary(lsmeans(ph.lm,~Genotype)))
+plot(ph.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(ph.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(ph.lmer))
+vars
+
+ph.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+ph.herit
+
+row <- data.frame("trait" ="plant_height", "H^2"= ph.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Ear Height
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=ear_height)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Ear Height")
+#ggplot(pheno.plot, aes(x=Year, y=plant_height, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = ear_height)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Ear Height")
+
+eh.lmer <- lmer(ear_height ~ (1|Genotype) + Rep:Year, data=pheno)
+eh.lmer
+summary(eh.lmer)
+
+eh.lm <- lm(ear_height ~ Genotype + Rep:Year, data=pheno)
+eh.lmer
+
+eh.re <- ranef(eh.lmer)
+
+
+line_means = as.data.frame(summary(lsmeans(eh.lm,~Genotype)))
+plot(eh.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(eh.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(eh.lmer))
+vars
+
+eh.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+eh.herit
+
+row <- data.frame("trait" ="ear_height", "H^2"= eh.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Leaf Number
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=leaf_number)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Leaf Number")
+#ggplot(pheno.plot, aes(x=Year, y=leaf_number, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = leaf_number)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Leaf Number")
+
+ln.lmer <- lmer(leaf_number ~ (1|Genotype) + Rep:Year, data=pheno)
+ln.lmer
+summary(ln.lmer)
+
+ln.lm <- lm(leaf_number ~ Genotype + Rep:Year, data=pheno)
+ln.lmer
+
+ln.re <- ranef(ln.lmer)
+
+
+line_means = as.data.frame(summary(lsmeans(ln.lm,~Genotype)))
+plot(ln.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(ln.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(ln.lmer))
+vars
+
+ln.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+ln.herit
+
+row <- data.frame("trait" ="leaf_number", "H^2"= ln.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Stover Yield
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=stover_yield)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Stover Yield")
+#ggplot(pheno.plot, aes(x=Year, y=stover_yield, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = stover_yield)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Stover Yield")
+
+sy.lmer <- lmer(stover_yield ~ (1|Genotype) + Rep:Year, data=pheno)
+sy.lmer
+summary(sy.lmer)
+
+sy.lm <- lm(stover_yield ~ Genotype + Rep:Year, data=pheno)
+sy.lmer
+
+sy.re <- ranef(sy.lmer)
+
+
+line_means = as.data.frame(summary(lsmeans(sy.lm,~Genotype)))
+plot(sy.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(sy.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(sy.lmer))
+vars
+
+sy.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+sy.herit
+
+row <- data.frame("trait" ="stover_yield", "H^2"= sy.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Juvenile
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=juvenile)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Juvenile")
+#ggplot(pheno.plot, aes(x=Year, y=juvenile, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = juvenile)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Juvenile")
+
+jvlmer <- lmer(juvenile ~ (1|Genotype) + Rep:Year, data=pheno)
+jvlmer
+summary(jvlmer)
+
+jvlm <- lm(juvenile ~ Genotype + Rep:Year, data=pheno)
+jvlmer
+
+jvre <- ranef(jvlmer)
+
+
+line_means = as.data.frame(summary(lsmeans(jvlm,~Genotype)))
+plot(jvre$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(jvlmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(jvlmer))
+vars
+
+jvherit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+jvherit
+
+row <- data.frame("trait" ="juvenile", "H^2"= jvherit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Percent Juvenile
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=percent_juvenile)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Percent Juvenile")
+#ggplot(pheno.plot, aes(x=Year, y=percent_juvenile, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = percent_juvenile)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Percent Juvenile")
+
+pj.lmer <- lmer(percent_juvenile ~ (1|Genotype) + Rep:Year, data=pheno)
+pj.lmer
+summary(pj.lmer)
+
+pj.lm <- lm(percent_juvenile ~ Genotype + Rep:Year, data=pheno)
+pj.lmer
+
+pj.re <- ranef(pj.lmer)
+
+line_means = as.data.frame(summary(lsmeans(pj.lm,~Genotype)))
+plot(pj.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(pj.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(pj.lmer))
+vars
+
+pj.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+pj.herit
+
+row <- data.frame("trait" ="percent_juvenile", "H^2"= pj.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Ear Internode
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=ear_internode)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Ear Internode")
+#ggplot(pheno.plot, aes(x=Year, y=ear_internode, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = ear_internode)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Ear Internode")
+
+ei.lmer <- lmer(ear_internode ~ (1|Genotype) + Rep:Year, data=pheno)
+ei.lmer
+summary(ei.lmer)
+
+ei.lm <- lm(ear_internode ~ Genotype + Rep:Year, data=pheno)
+ei.lmer
+
+ei.re <- ranef(ei.lmer)
+
+
+line_means = as.data.frame(summary(lsmeans(ei.lm,~Genotype)))
+plot(ei.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(ei.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(ei.lmer))
+vars
+
+ei.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+ei.herit
+
+row <- data.frame("trait" ="ear_internode", "H^2"= ei.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Internode Length
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=internode_length)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Internode Length")
+#ggplot(pheno.plot, aes(x=Year, y=internode_length, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = internode_length)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Internode Length")
+
+il.lmer <- lmer(internode_length ~ (1|Genotype) + Rep:Year, data=pheno)
+il.lmer
+summary(il.lmer)
+
+il.lm <- lm(internode_length ~ Genotype + Rep:Year, data=pheno)
+il.lmer
+
+il.re <- ranef(il.lmer)
+
+
+line_means = as.data.frame(summary(lsmeans(il.lm,~Genotype)))
+plot(il.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(il.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(il.lmer))
+vars
+
+il.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+il.herit
+
+row <- data.frame("trait" ="internode_length", "H^2"= il.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Internode above Ear
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=internode_above_ear)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Internode Above Ear")
+#ggplot(pheno.plot, aes(x=Year, y=internode_above_ear, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = internode_above_ear)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Internode Above Ear")
+
+iae.lmer <- lmer(internode_above_ear ~ (1|Genotype) + Rep:Year, data=pheno)
+iae.lmer
+summary(iae.lmer)
+
+iae.lm <- lm(internode_above_ear ~ Genotype + Rep:Year, data=pheno)
+iae.lmer
+
+iae.re <- ranef(iae.lmer)
+
+
+line_means = as.data.frame(summary(lsmeans(iae.lm,~Genotype)))
+plot(iae.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(iae.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(iae.lmer))
+vars
+
+iae.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+iae.herit
+
+row <- data.frame("trait" ="internode_above_ear", "H^2"= iae.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Adult
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=adult)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Adult")
+#ggplot(pheno.plot, aes(x=Year, y=adult, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = adult)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Adult")
+
+ad.lmer <- lmer(adult ~ (1|Genotype) + Rep:Year, data=pheno)
+ad.lmer
+summary(ad.lmer)
+
+ad.lm <- lm(adult ~ Genotype + Rep:Year, data=pheno)
+ad.lmer
+
+ad.re <- ranef(ad.lmer)
+
+
+line_means = as.data.frame(summary(lsmeans(ad.lm,~Genotype)))
+plot(ad.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(ad.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(ad.lmer))
+vars
+
+ad.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+ad.herit
+
+row <- data.frame("trait" ="adult", "H^2"= ad.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+### Percent Adult
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+ggplot(pheno.plot, aes(x=Year, y=percentage_adult)) +
+  geom_boxplot(aes(color=as.factor(Rep))) +
+  labs(title = "Percent Adult")
+#ggplot(pheno.plot, aes(x=Year, y=percentage_adult, colour=as.factor(Entry))) +
+#  geom_boxplot() +
+#  theme(legend.position="none")
+
+ggplot(pheno.plot, aes(x=Population.Group, y = percentage_adult)) +
+  geom_boxplot() +
+  geom_jitter(aes(colour = as.factor(Population.Group))) +
+  labs(title = "Percent Adult")
+
+pa.lmer <- lmer(percentage_adult ~ (1|Genotype) + Rep:Year, data=pheno)
+pa.lmer
+summary(pa.lmer)
+
+pa.lm <- lm(percentage_adult ~ Genotype + Rep:Year, data=pheno)
+pa.lmer
+
+pa.re <- ranef(pa.lmer)
+
+
+line_means = as.data.frame(summary(lsmeans(pa.lm,~Genotype)))
+plot(pa.re$Genotype[,1],line_means$lsmean);abline(0,1)
+summary(pa.lmer)
+#calculate the estimated variances, std dev, correlations between random-effects terms in the 
+# mixed effect model
+vars = as.data.frame(VarCorr(pa.lmer))
+vars
+
+pa.herit <- vars[1,]$vcov/(vars[1,]$vcov + vars[2,]$vcov)
+pa.herit
+
+row <- data.frame("trait" ="percentage_adult", "H^2"= pa.herit)
+heritability_traits <- rbind(heritability_traits, row)
+```
+
+Heritability table:
+
+```{r}
+heritability_traits
+```
+

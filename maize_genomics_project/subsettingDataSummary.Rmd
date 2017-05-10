@@ -7,15 +7,18 @@ output: html_document
 
 ```{r}
 setwd("~/Dropbox/UCD/rotations/RRI/maize_genomics_project")
+
+library(gplots)
 ```
 
 Number of lines in the expression data:
 
 ```{r}
-exp_raw <- read.table("data/processing/maize_503genotypes_raw_expression_values_FPKM_cleaned.txt", header=T, sep="\t")
+exp_raw <- read.table("data/processed/maize_503genotypes_raw_expression_values_FPKM_cleaned.txt", header=T, sep="\t")
 dim(exp_raw)
 
 lines <- names(exp_raw)[5:507]
+
 ```
 
 Lines in the phenotype data:
@@ -23,8 +26,9 @@ Lines in the phenotype data:
 ```{r}
 phenotype <- read.table("data/processed/WIDIV_2010_paper_phenotypic_data_cleaned.csv", header=T, sep=",")
 2856/4
-pheno_lines <- phenotype[phenotype$Year == "2008" & phenotype$Rep == 1,]$Entry
-write.table(pheno_lines, file="data/processed/WIDIV_phenotype_lines.txt", sep="\n", quote = F, row.names = F)
+pheno_lines <- as.character(phenotype[phenotype$Year == "2008" & phenotype$Rep == 1,]$Entry)
+#write.table(pheno_lines, file="data/processed/WIDIV_phenotype_lines.txt", sep="\n", quote = F, row.names = F)
+length(pheno_lines)
 ```
 
 Imputed traits
@@ -40,16 +44,94 @@ meta <- read.table("data/processed/maize_503Exp_metaMatches.csv", sep=",", heade
                    na.strings = ".")
 
 PE_GBS_overlap <- meta[complete.cases(meta$PE_overlap) & meta$FullName != "no dictionary match",]
+dim(PE_GBS_overlap)
+#386
 
 #But with Rongkui's data:
 
-load("data/wgcna_output/line_names_361.RData")
+load("data/wgcna_gwas_output/line_names_361.RData")
 meta361 <- meta[meta$OriginalName %in% linenames361,]
-
+dim(meta361)
 #and of these 361, lines with phenotype data and a GBS name
 meta361_overlap <- meta361[complete.cases(meta361$PE_overlap) & meta361$FullName != "no dictionary match",]
+dim(meta361_overlap) #304 maize lines
 
 write.table(meta361_overlap$FullName, file="data/maize_304_GBS.txt", sep="\n", quote = F, row.names = F, col.names = F)
+```
 
+the table with the lines included in analysis
+
+```{r}
+maize2_meta <- read.table("data/processed/maize_503Exp_metaMatches.csv", header=T, sep=",")
+
+gbs292 <- read.table("data/trait_gwas_output/maize_292.txt")
+
+original_names_292 <- maize2_meta[maize2_meta$GBS_NAME %in% gbs292$V1,]
+original_names_292 <- original_names_292[,c(2,5)]
+dim(original_names_292)
+```
+
+## Subsetting the WGCNA output with the 292 maize lines that are in the GBS data
+
+```{r}
+load("data/wgcna_gwas_output/line_names_361.RData")
+load("data/wgcna_gwas_output/maize361-networkConstruction-stepByStep.RData")
+
+rownames(MEs_361) <- linenames361
+
+MEs_292 <- MEs_361[rownames(MEs_361) %in% original_names_292$OriginalName,]
+write.table(MEs_292, file="data/wgcna_gwas_output/292_MEs.bb", sep=" ", col.names = F, row.names = F, quote = F)
+```
+
+Subset the Expressed Gene data to the 413 maize lines present in the GBS data
+
+```{r}
+expressed_full <- read.table("/Users/caryn/Dropbox/UCD/rotations/RRI/Hirsch_correlations/data/processed/maize_503genotypes_FPKM_expressed.txt", sep=" ", header=T)
+
+gbs413 <- read.table("/Users/caryn/Dropbox/UCD/rotations/RRI/maize_genomics_project/data/eQTL/ZeaGBSv27_503Exp_lines.txt")
+nameMeta <- read.table("/Users/caryn/Dropbox/UCD/rotations/RRI/maize_genomics_project/data/processed/maize_503Exp_metaMatches.csv", sep=",", header=T)
+
+meta413 <- as.character(nameMeta[as.character(nameMeta$GBS_NAME) %in% as.character(gbs413$V1),]$OriginalName)
+
+expT <- t(expressed_full)
+dim(expT)
+
+exp413 <- expT[rownames(expT) %in% as.character(meta413),]
+dim(exp413)
+#save as bimbam, comma separated value
+write.table(exp413, file="/Users/caryn/Dropbox/UCD/rotations/RRI/maize_genomics_project/data/eQTL/maize_414_expressedFPKM.bb", sep=",", quote=F, 
+            col.names=F, row.names=F)
+genes <- colnames(exp413)
+length(genes)
+genes <- as.character(genes)
+
+write.table(genes, file="/Users/caryn/Dropbox/UCD/rotations/RRI/maize_genomics_project/data/eQTL/genes.txt", sep=",", quote=F, row.names = F, col.names = F)
+```
+
+relatedness matrix for the expression data
+
+```{r}
+relmat <- read.table("data/Exp_RelMat/ZeaGBSv27_sF.sXX.txt")
+lines_for_that <- read.table("data/Exp_RelMat/ZeaGBSv27_503Exp_lines.txt")
+non_pheno <- read.table("data/Exp_RelMat/nonphenotypes.bb")
+
+image(as.matrix(relmat))
+
+exp414 <- read.table("/Users/caryn/Dropbox/UCD/rotations/RRI/maize_genomics_project/data/eQTL/maize_414_expressedFPKM.bb", sep =",", header=T)
+oneExp <- exp414[,1]
+write.table(oneExp, "data/Exp_RelMat/exp414.bb", quote = F, col.names = F, row.names = F, sep="\n")
+```
+
+### Meta Matches Sorting, and Venn Diagram
+
+```{r}
+library(VennDiagram)
+meta <- read.table("data/processed/maize_503Exp_metaMatches.csv", sep=",", header=T)
+
+P_GBS <- meta[meta$FullName != "no dictionary match",]
+P_E <- meta[meta$PE_overlap != ".",]
+P_E_GBS <- P_E[P_E$PE_overlap %in% P_GBS$PE_overlap,]
+
+draw.triple.venn(area1 = 503, area2 = 17280, area3 = 714, n12 = 414, n23=620, n13=426, n123=361, category = c("Expression Data", "GBS Data", "Phenotype Data"))
 ```
 

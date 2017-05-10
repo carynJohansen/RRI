@@ -1,0 +1,507 @@
+---
+title: "Imputing Phenotype Data"
+author: "Caryn Johansen"
+date: "4/18/2017"
+output: html_document
+---
+
+modified script from Rongkui
+
+```{r}
+#setwd("~/Dropbox/UCD/rotations/RRI/maize_genomics_project/")
+library(reshape2)
+library(ggplot2)
+## Loading phenotype data
+td <- read.table("data/processed/WIDIV_2010_paper_phenotypic_data_cleaned.csv",sep=",", header=T, na.strings = ".")
+
+## model for year effect (line~year*rep(use 1,2 in year1 and 3,4 in year2), with lsmeans function in package lsmeans) instead of removing na's. 
+trait2008 <- td[td$Year=="2008",]
+trait2009 <- td[td$Year=="2009",]
+trait2009$Rep[trait2009$Rep==1] <- 3
+trait2009$Rep[trait2009$Rep==2] <- 4
+td <- rbind(trait2008, trait2009)
+
+td$Year <- as.factor(as.integer(td$Year))
+td$Rep <- as.factor(as.numeric(td$Rep))
+td$Entry <- as.factor(as.character(td$Entry))
+str(td)
+```
+
+```{r}
+image(as.matrix(td[,7:20]))
+```
+
+
+```{r}
+td2 <- td[,-c(3:6)]
+
+td2_m <- melt(td2, id.vars = c("Year","Rep"))
+td2_m$Rep <- as.factor(as.numeric(td2_m$Rep))
+td2_m$Year <- as.factor(as.integer(td2_m$Year))
+ggplot(td2_m, aes(x=Year, y=value, colour=Rep)) +
+  geom_boxplot() +
+  facet_wrap(~variable, scale = "free")
+```
+
+
+That there are some lines that always have NA's is a problem, and we have to remove them:
+
+```{r}
+to.clean <- data.frame(line=NA, i=NA)
+
+for (i in 1:nrow(td)) {
+  # find lines of maize that continuously return only NAs
+  if (sum(is.na(td[i,7:20])) == 14) {
+    line <- as.character(td[i,3])
+    line.idx <- cbind(line, i)
+    to.clean <- rbind(to.clean, line.idx)
+  }
+}
+
+to.clean<- to.clean[-1,]
+
+to.clean$line <- as.factor(as.character(to.clean$line))
+to.clean$i <- as.integer(as.character(to.clean$i))
+
+##remove the repeat offender lines
+x <- table(to.clean$line)
+
+#only want to remove the repeating lines, so that have na's in all 4 measurment windows (Year by Rep)
+to_remove_table <- x[x >= 4]
+length(to_remove_table)
+to_remove <- to.clean[to.clean$line %in% names(to_remove_table),]
+
+td.clean <- td[-to_remove$i,]
+image(as.matrix(td.clean[,7:20]))
+```
+
+
+remove kernal300 as trait
+
+```{r}
+td.clean <- td.clean[,-8]
+image(as.matrix(td.clean[,7:19]))
+```
+
+Calculate least squares means with lsmeans
+
+```{r}
+library(lsmeans)
+
+lsmeans.td = as.data.frame(td.clean[unique(td.clean$Entry),]$Entry)
+#there are 631 maize lines now
+td.clean.lines <- as.character(unique(td.clean$Entry))
+
+colnames(lsmeans.td) <- "Entry"
+pred.td <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+
+imputed_pheno_list <- list()
+
+```
+
+For each trait, fit a linear model, then use lsmeans
+
+```{r}
+traits <- colnames(td.clean)[7:19]
+traits
+```
+
+It won't work as a loop, because not each trait has more than one rep and year (some traits have only one rep, or only one year)
+
+GDD
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+t <- colnames(td.clean)[7]
+t
+
+#raw trait values
+y <- td.clean[,7]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Year, data = td.clean, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 40 lines that had na's and were omitted in the lm stage
+missing_lines <- td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))]
+```
+
+Stalk
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+t <- colnames(td.clean)[8]
+t
+
+#raw trait values
+y <- td.clean[,8]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Rep, data = td.clean, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 97 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Plant Height
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#In order to use the interaction between Rep and Year, the reps here  need to be 1 and 2, across both years (not 1,2,3,4)
+td.year2008 <- td.clean[td.clean$Year == "2008",]
+td.year2009 <- td.clean[td.clean$Year == "2009",]
+td.year2009$Rep[td.year2009$Rep == 3] <- 1
+td.year2009$Rep[td.year2009$Rep == 4] <- 2
+
+td.clean.ph <- rbind(td.year2008, td.year2009)
+
+t <- colnames(td.clean)[9]
+t
+
+#raw trait values
+y <- td.clean[,9]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean.ph, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 97 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Ear height
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#same here
+t <- colnames(td.clean)[10]
+t
+
+#raw trait values
+y <- td.clean[,10]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean.ph, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 97 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Leaf Number
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#same here
+t <- colnames(td.clean)[11]
+t
+
+#raw trait values
+y <- td.clean[,11]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean.ph, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 97 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Stover Yield
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#use td.clean here - only collected in year 2008, so use Rep as the fixed effect
+t <- colnames(td.clean)[12]
+t
+
+#raw trait values
+y <- td.clean[,12]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Rep, data = td.clean, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+#there are 97 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+
+Precent Juvenile
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#use td.clean.ph here - four reps across two years
+t <- colnames(td.clean)[13]
+t
+
+#raw trait values
+y <- td.clean[,13]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean.ph, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 97 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Ear Internode -SKIP
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#use td.clean.ph here - two reps in one year
+t <- colnames(td.clean)[14]
+t
+
+#raw trait values
+y <- td.clean[,14]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Rep, data = td.clean, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#DO I care about ear internode? This lost me 50 maize lines...
+#there are 141 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Internode Length
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#use td.clean.ph here - four reps across two years
+t <- colnames(td.clean)[15]
+t
+
+#raw trait values
+y <- td.clean[,15]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean.ph, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 141 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Internode above ear length - SKIP
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#use td.clean here - two reps in one year (2009)
+t <- colnames(td.clean)[16]
+t
+
+#raw trait values
+y <- td.clean[,16]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Rep, data = td.clean, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 141 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Adult
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#use td.clean.ph here - four reps, two years
+t <- colnames(td.clean)[17]
+t
+
+#raw trait values
+y <- td.clean[,17]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean.ph, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 141 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Percent Juvenile
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#use td.clean.ph here - four reps, two years
+t <- colnames(td.clean)[18]
+t
+
+#raw trait values
+y <- td.clean[,18]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean.ph, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 141 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Percentage Adult
+```{r}
+pred.trait <- as.data.frame(td.clean[, c("Year", "Rep", "Entry")])
+#use td.clean.ph here - four reps, two years
+t <- colnames(td.clean)[19]
+t
+
+#raw trait values
+y <- td.clean[,19]
+
+#trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean, na.action = na.omit)
+trait.lm <- lm(y ~ 0 + Entry + Year*Rep, data = td.clean.ph, na.action = na.omit)
+
+pred.test <- lsmeans(trait.lm, "Entry")
+
+pred.test.t = summary(pred.test)[,c(1:2)]
+colnames(pred.test.t)[2] <- t
+
+pred.trait = merge(pred.trait,pred.test.t,by = "Entry")
+pred.trait <- pred.trait[,c(1,4)]
+pred.trait <- pred.trait[!duplicated(pred.trait),]
+
+imputed_pheno_list[[t]] <- pred.trait
+
+#there are 141 lines that had na's and were omitted in the lm stage
+missing_lines <- c(missing_lines, td.clean.lines[!(td.clean.lines %in% as.character(pred.test.t$Entry))])
+missing_lines <- unique(missing_lines)
+```
+
+Remove duplicated lines
+
+```{r}
+#just entry and imputed traits
+#td.pred <- pred.td[,c(1,4:14)]
+#td.predicted <- td.pred[!duplicated(td.pred),]
+
+#write.table(td.predicted, "~/Dropbox/UCD/rotations/RRI/maize_genomics_project/data/processed/traits_imputed_04182017.txt", sep=",", quote = F, row.names = F)
+```
+
+Save list
+
+```{r}
+#save(imputed_pheno_list, file = "imputed_phenotypes_list")
+```
+

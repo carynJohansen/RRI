@@ -14,6 +14,7 @@ setwd("~/Dropbox/UCD/rotations/RRI/maize_genomics_project/")
 library(gplots)
 library(ggplot2)
 library(qqman)
+library(reshape2)
 ```
 
 Load wgcna Rdata file
@@ -26,11 +27,42 @@ load expression data
 load("data/wgcna_gwas_output/line_names_361.RData")
 load("data/wgcna_gwas_output/maize361-networkConstruction-stepByStep.RData")
 
-#exp <- read.table("../Hirsch_correlations/data/processed/maize_503genotypes_FPKM_expressed.txt", header=T)
+exp <- read.table("../Hirsch_correlations/data/processed/maize_503genotypes_FPKM_expressed.txt", header=T)
 #write.table(expdata503_names, file="maize_503Exp_originalNames.txt", sep="\n", quote=F, row.names = F)
 
+#original expression data, unfiltered. This has start and stop information for each gene
+#orig_exp <- read.table("../Hirsch_correlations/data/processed/maize_503genotypes_raw_expression_values_FPKM_cleaned.txt", sep="\t",header=T)
+#remove all the expression values - don't need these, just the gene start and stop info
+#gene_location <- orig_exp[,c(1:4)]
+
+#remove joint_loci, because I don't really know what to do with them
+#gene_loc <- gene_location[-grep("joint", gene_location$chromosome),]
+#gene_loc <- gene_loc[-grep("UNKNOWN", gene_loc$chromosome),]
+
+#genelc_chr <- gene_loc$chromosome
+#gene_loc$chr <- gsub("chr", "", genelc_chr)
+#gene_loc$chr <- as.integer(as.character(gene_loc$chr))
+
+#rm(orig_exp)
+
+#write.table(gene_loc, file="data/wgcna_gwas_output/gene_loc.txt", sep=",", quote=F)
+gene_loc <- read.table("data/wgcna_gwas_output/gene_loc.txt", sep=",", header=T)
+gene_loc$gene <- as.character(gene_loc$gene)
 genotype <- read.table("data/ZeaGBSv27_s_vF.bimbam", sep=",")
 ```
+
+# Distribution of Eigengenes
+
+```{r, fig.height=8, fig.width=12}
+eg_t <- t(MEs_361)
+eg <- melt(eg_t)
+
+ggplot(eg, aes(x=value, y=..density..)) + geom_histogram() + facet_grid(Var1~., scales = "free")
+
+ggplot(eg, aes(x=Var1, y=value)) + geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), scale = "count") + facet_wrap(~Var1, nrow=5, ncol=5, scales = "free")
+
+```
+
 
 #Data processing
 
@@ -88,7 +120,7 @@ Run GWAS without the maize lines with a high frequency of missing data. Remember
 
 ##Site Frequency Spectrum
 
-```{r, fig.show='hold', fig.width=12, fig.height=8, eval=F}
+```{r, fig.show='hold', fig.width=12, fig.height=8}
 library(reshape2)
 library(zoo)
 a_freq <- read.table("ZEAGBSv27_s_F_freq.csv", sep=",", header=T)
@@ -122,7 +154,7 @@ ggplot(afl, aes(x=POS, y=FREQ, colour=as.factor(time))) + geom_line()
 ```
 
 
-```{r,, eval=F}
+```{r}
 hist(a_freq$A1_FREQ, main = "Major Allele Frequency")
 min(a_freq$A1_FREQ)
 a_freq[a_freq$A1_FREQ == min(a_freq$A1_FREQ),]
@@ -136,6 +168,26 @@ ggplot(a_freq, aes(A2_FREQ)) + geom_density(aes(y=..scaled..)) +
   labs(title = "Minor Allele Site Frequency Spectrum", x= "Minor Allele Frequency", y = "Density of AF")
 ```
 
+# Modules and their Genes
+
+```{r}
+gene <- as.character(exp$gene)
+length(gene)
+gene <- gene[1:15205]
+modGenes <- data.frame(cbind(gene, moduleColors_361, moduleLabels_361))
+table(modGenes$moduleColors_361)
+
+modGenes <- merge(modGenes, gene_loc)
+
+#plot(table(modGenes$moduleColors_361))
+ggplot(modGenes, aes(x=moduleColors_361)) + geom_bar() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), text=element_text(size=20)) +
+  xlab("Modules by Color Label") + ylab("Number of Genes")
+#ggsave("output/modGeneCount.png", width = 12, height = 8)
+#write.table(modGenes, file="data/processed/module_Genes.txt", quote = F, row.names = F, sep="\t")
+
+```
 
 ######
 ##WGCNA Module GWAS
@@ -156,19 +208,53 @@ mods <- colnames(MEs_361)
 mods
 ```
 
-```{r, fig.show='hold', fig.width=12, fig.height=8}
+```{r, fig.show='hold', fig.width=12, fig.height=8,}
+
+sig.genes <- list()
 
 for (i in 1:length(mods)) {
+  modclr <- sub("ME", "", mods[i])
   mod_path <- paste(paste("data/wgcna_gwas_output/", mods[i], sep=""), "/output/", sep="")
   assoc.file <- paste(paste("ZeaGBSv27_", mods[i], sep=""), ".assoc.txt", sep="")
   rel.file <- "ZeaGSv27_sF.sXX.txt"
   ME.assoc <- read.table(paste(mod_path, assoc.file, sep=""), header=T)
-
+  ME.assoc <- ME.assoc[order(ME.assoc$chr,ME.assoc$ps),]
+  #ME.assoc$counter <- seq(1:nrow(ME.assoc))
+  
+  
   ME.assoc$chr <- as.numeric(as.integer(ME.assoc$chr))
   
-  #par(mfrow=c(1,2), las=1)
-  manhattan(ME.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=mods[i])
-  qq(ME.assoc$p_score, main=paste(mods[i], "Q-Q plot of GWAS p-values", sep="\n"))
+  genes <- modGenes[modGenes$moduleColors_361 == modclr,]
+
+  #get start and stop for each gene
+  #loc <- merge(genes, gene_loc, by = "gene")
+  #print("Number of genes in:") 
+  #print(mods[i])
+  #print(nrow(loc))
+  #mg <- as.character()
+
+  #for (j in seq(1:10)) {
+  #  chrm <- loc[loc$chr == j,]
+  #  asc.chr <- ME.assoc[ME.assoc$chr == j,]
+  #  for (p in 1:nrow(chrm)) {
+  #    pos_rs <- as.character(asc.chr[asc.chr$ps >= chrm[p,5] & asc.chr$ps <= chrm[p,6],]$rs)
+  #    mg <- c(mg, pos_rs)
+  #  }
+  #}
+  #sig.genes[[i]] <- mg
+  #print("number of SNPs in the genes")
+  #print(length(mg))
+
+  #manhattan(ME.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=mods[i])#, highlight=mg)
+  #qq(ME.assoc$p_score, main=paste(mods[i], "Q-Q plot of GWAS p-values", sep="\n"))
+  mod_plot_file <- paste(paste("output/wgcna_figures/", modclr, sep=""), ".png", sep="")
+  ggplot(ME.assoc, aes(x=ps, y=-log10(p_score), colour=chr)) + geom_point() + 
+    facet_grid(.~chr) +
+    geom_hline(yintercept=-log10(1e-05), colour="red") +
+    theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 18, face="bold"), legend.position = "none") + xlab("Position") + ylab("- log10 (p)") + ggtitle(modclr)
+  ggsave(file=mod_plot_file, width=12, height=8)
 }
 ```
 
@@ -278,7 +364,199 @@ soi
 manhattan(turq3, chr="chr", snp="rs", bp="ps", p="p_score", main=turq, highlight = soi)
 ```
 
+###BLACK
+
+Black and Lightyellow modules were correlated to GDD
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+black <- mods[11]
+black
+
+black.assoc <- read.table("data/wgcna_gwas_output/MEblack/output/ZeaGBSv27_MEblack.assoc.txt", header=T)
+
+black.assoc$chr <- as.numeric(as.integer(black.assoc$chr))
+
+black_high <- black.assoc[black.assoc$p_score < 0.0001,]
+soi <- black_high$rs
+
+manhattan(black.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=black, highlight = soi)
+#manhattan(subset(black.assoc, chr == 7), chr="chr", snp="rs", bp="ps", p="p_score", main=black, highlight = soi)
+qq(black.assoc$p_score, main=paste(black, "Q-Q plot of GWAS p-values", sep="\n"))
+
+ggplot(black.assoc, aes(x=ps, y=-log10(p_score), colour=chr)) + geom_point() + 
+    facet_grid(.~chr) +
+    geom_hline(yintercept=-log10(1e-05), colour="red") +
+    theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 18, face="bold"), legend.position = "none") + xlab("Position") + ylab("- log10 (p)") + ggtitle("Black Module")
+#ggsave(file="output/wgcna_figures/black_fine.png", width = 12, height = 8)
+```
+
+Genes in peak in Chr 3: 
+AC190488.1_FG003, and ORF, product: P
+  - start: 133389569
+  - end: 133390030
+GRMZM2G160687 - floral transcription factor, zag2, an AGAMOUS homolog
+  ZAG - Zea AGAMOUS 2
+  start - 137255997
+  Hm, also, primarily expressed in the ear and endosperm... so why is there a peak here?
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+black3 <- black.assoc[black.assoc$chr == 3,]
+peak1<- black3[black3$ps >= 137114949 & black3$ps <= 137260427, ]
+
+highest <- black.assoc[43784,]
+
+soi <-  as.character(peak1$rs)
+soi
+
+zag2 <- data.frame("chr"=3,"ps"=as.integer(137256737))
+
+manhattan(black3, chr="chr", snp="rs", bp="ps", p="p_score", main=black, highlight = soi)
+ggplot(black.assoc, aes(x=ps, y=-log10(p_score), colour=chr)) + geom_point() + 
+  facet_grid(.~chr) +
+  #geom_vline(data=peak1, aes(xintercept = ps)) +
+  geom_vline(data=zag2, colour="blue",aes(xintercept = ps)) +
+  geom_hline(yintercept=-log10(1e-05), colour="red") +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 18, face="bold"), legend.position = "none") + xlab("Position") + ylab("- log10 (p)")
+```
+
+Is GRMZM2G160687 in my expression data, and is it in the black module?
+
+GRMZM2G338160
+
+```{r}
+q <- modGenes[modGenes$gene == "GRMZM2G160687",]
+q
+
+a <- modGenes[modGenes$gene == "AC190488.1_FG003",]
+a
+```
+
+No, GRMZM2G160687 is not included in the gene expression dataset, and not included in the module formation.
+
+Neither is AC190488.1_FG003
+
+genes in black module:
+
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+blackGenes <- modGenes[modGenes$moduleColors_361 == "black",]
+blackGenes$ps <- blackGenes$position_left
+#get start and stop for each gene
+#black_loc <- merge(blackGenes, gene_loc, by = "gene")
+#black_loc <- gene_loc[gene_loc$gene %in% blackGenes$gene,]
+
+black3genes <- blackGenes[blackGenes$chr == 3,]
+black3 <- black.assoc[black.assoc$chr == 3,]
+
+mg <- as.character()
+
+for (i in seq(1:10)) {
+  chrm <- blackGenes[blackGenes$chr == i,]
+  asc.chr <- black.assoc[black.assoc$chr == i,]
+  for (j in 1:nrow(chrm)) {
+    pos_rs <- as.character(asc.chr[asc.chr$ps >= chrm[j,5] & asc.chr$ps <= chrm[j,6],]$rs)
+    mg <- c(mg, pos_rs)
+  }
+}
+
+#pdf(file="/Users/caryn/Dropbox/UCD/GSR_2017Application/figures/black_marked.pdf")
+manhattan(black.assoc, chr="chr", snp="rs", bp="ps", p="p_score", highlight = mg)
+#dev.off()
+
+zag2 <- data.frame("chr"=3,"ps"=as.integer(137256737))
+
+ggplot(black3, aes(x=ps, y=-log10(p_score))) + geom_point() + 
+  #facet_grid(.~chr) +
+  #geom_vline(data=peak1, aes(xintercept = ps)) +
+  #geom_vline(data=black3genes,aes(xintercept = ps), colour="blue") +
+  geom_vline(data=zag2, colour="blue",aes(xintercept = ps)) +
+  geom_hline(yintercept=-log10(1e-05), colour="red") +
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 18, face="bold"), legend.position = "none") + xlab("Position") + ylab("- log10 (p)") + ggtitle("Black Module, Chromosome 3\n45 Genes")
+ggsave(file="output/wgcna_figures/black_chr3.png", width = 12, height = 8)
+
+```
+
+### Lightyellow
 
 
-# Modules and their Genes
+```{r, fig.show='hold', fig.width=12, fig.height=8}
+lightyellow <- mods[9]
+lightyellow
+
+lightyellow.assoc <- read.table("data/wgcna_gwas_output/MElightyellow/output/ZeaGBSv27_MElightyellow.assoc.txt", header=T)
+
+lightyellow.assoc$chr <- as.numeric(as.integer(lightyellow.assoc$chr))
+
+lightyellow_high <- lightyellow.assoc[lightyellow.assoc$p_score < 0.0001,]
+soi <- lightyellow_high$rs
+
+manhattan(lightyellow.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=lightyellow, highlight = soi)
+#manhattan(subset(lightyellow.assoc, chr == 7), chr="chr", snp="rs", bp="ps", p="p_score", main=lightyellow, highlight = soi)
+qq(lightyellow.assoc$p_score, main=paste(lightyellow, "Q-Q plot of GWAS p-values", sep="\n"))
+```
+
+Do any of these overlap with black?
+
+```{r}
+ly_bl_peakOverlap <- black_high[as.character(black_high$rs) %in% as.character(lightyellow_high$rs),]
+dim(ly_bl_peakOverlap)
+```
+Nope.
+
+## Toy example
+
+```{r,fig.show='hold', fig.width=12, fig.height=8}
+lg <- mods[3]
+
+lg.assoc <- read.table("data/wgcna_gwas_output/MElightgreen/output/ZeaGBSv27_MElightgreen.assoc.txt", header=T)
+
+lg.assoc$chr <- as.numeric(as.integer(lg.assoc$chr))
+
+#lg_high <- lg.assoc[lg.assoc$p_score < 0.0001,]
+#soi <- lg_high$rs
+
+#manhattan(lg.assoc, chr="chr", snp="rs", bp="ps", p="p_score", main=lg, highlight = soi)
+#manhattan(subset(lg.assoc, chr == 7), chr="chr", snp="rs", bp="ps", p="p_score", main=lg, highlight = soi)
+#qq(lg.assoc$p_score, main=paste(lg, "Q-Q plot of GWAS p-values", sep="\n"))
+
+lg5 <- lg.assoc[lg.assoc$chr == 5,]
+lg5 <- lg5[,c(1,3,14)]
+
+lg5.peak <- data.frame("chr" = 5, "ps"=seq(130000000, 130001000, by=20), "p_score" = seq(0.7, ))
+
+ggplot(lg5, aes(x=ps, y=-log10(p_score), colour=chr)) + geom_point() + 
+  facet_grid(.~chr) +
+  geom_hline(yintercept=-log10(1e-05), colour="red") +
+  geom_vline(xintercept = 1.3e8) +
+    theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold"), 
+        strip.text.x = element_text(size = 18, face="bold"), legend.position = "none") + xlab("Position") + ylab("- log10 (p)") + ggtitle("lg Module")
+```
+
+## Eigengene plot
+
+```{r}
+eg_t <- t(MEs_361)
+eg <- melt(eg_t)
+
+ggplot(eg[eg$Var1 == "MEblack",], aes(Var2, value)) + geom_point()
+ggplot(eg[eg$Var1 == "MEblack",], aes(Var2, value)) + geom_line()
+ggsave("output/black_eigengene_line.png", width=12, height = 8)
+ggplot(eg, aes(Var2, value, colour=Var1)) + geom_point()
+```
+
+PC of black gene expression
+
+```{r}
+blk_exp <- merge(blackGenes, exp)
+be <- blk_exp[,4:506]
+blk_pca <- prcomp(be,center = T, scale. = T)
+blk_comps <- as.data.frame(blk_pca$x)
+plot(blk_comps$PC1, blk_comps$PC2)
+```
 
