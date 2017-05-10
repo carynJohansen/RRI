@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+
+
+<title>Graphing gemma lmm output</title>
+
+<script src="Summary_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="Summary_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="Summary_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="Summary_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="Summary_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="Summary_files/navigation-1.1/tabsets.js"></script>
+<link href="Summary_files/highlightjs-1.1/default.css" rel="stylesheet" />
+<script src="Summary_files/highlightjs-1.1/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs && document.readyState && document.readyState === "complete") {
+   window.setTimeout(function() {
+      hljs.initHighlighting();
+   }, 0);
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Graphing gemma lmm output</h1>
+
+</div>
+
+
+<p>Ran GEMMA on traits and relatedness matrix</p>
+<pre class="r"><code>setwd(&quot;~/Dropbox/UCD/rotations/RRI/maize_genomics_project&quot;)</code></pre>
+<p>Load libraries</p>
+<pre class="r"><code>library(gplots)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;gplots&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:stats&#39;:
+## 
+##     lowess</code></pre>
+<pre class="r"><code>library(qqman)</code></pre>
+<pre><code>## </code></pre>
+<pre><code>## For example usage please run: vignette(&#39;qqman&#39;)</code></pre>
+<pre><code>## </code></pre>
+<pre><code>## Citation appreciated but not required:</code></pre>
+<pre><code>## Turner, S.D. qqman: an R package for visualizing GWAS results using Q-Q and manhattan plots. biorXiv DOI: 10.1101/005165 (2014).</code></pre>
+<pre><code>## </code></pre>
+<div id="phenotype-traits" class="section level1">
+<h1>Phenotype traits</h1>
+<p>Trait names</p>
+<pre class="r"><code>traits &lt;- read.table(&quot;data/gemma_input/traits.txt&quot;, sep=&quot;,&quot;)
+#get ride of the first value, which is the word &quot;taxa&quot;
+traits &lt;- traits[,-1]
+traits</code></pre>
+<pre><code>##    V2    V3           V4         V5          V6           V7       V8
+## 1 GDD stalk plant_height ear_height leaf_number stover_yield juvenile
+##              V9              V10                 V11   V12
+## 1 ear_internode internode_length internode_above_ear adult
+##                V13              V14
+## 1 percent_juvenile percentage_adult</code></pre>
+<p>(Wisconsin Diversity Panel Phenotypes)<br />
+GDD: days to flowering (growing degree days)<br />
+kernel300 - weight of 300 kernels (g)<br />
+stalk - stalk diameter (cm)<br />
+plant_height - cm<br />
+ear_height - cm<br />
+leaf_number - number of leaves<br />
+stover_yield - <span class="math inline">\(t ha^{-1}\)</span><br />
+juvenile - last leaf with epicuticular wax (length? what is this?)<br />
+ear_internode - uppermost internode with developed ear (unit?)<br />
+internode_length - cm<br />
+internode_above_ear - number of internodes above uppermost ear<br />
+adult - number of leaves with no epicuticular wax<br />
+percent_juvenile - percent of leave with epicuticular wax<br />
+percentage_adult - percent of leaves with no epicuticular wax</p>
+<div id="phenotype-distribution" class="section level3">
+<h3>Phenotype Distribution</h3>
+<pre class="r"><code>library(reshape2)
+library(ggplot2)
+pheno &lt;- read.table(&quot;data/traits/trait_impute.csv&quot;, sep=&quot;,&quot;, header=T)
+pheno &lt;- pheno[,-c(1,2)]
+#pheno &lt;- pheno[,-1]
+pheno&lt;- data.frame(t(pheno))
+
+pheno$trait &lt;- row.names(pheno)
+pheno.m &lt;- melt(pheno, id.vars = &quot;trait&quot;)
+
+ggplot(pheno.m, aes(x=trait, y=value)) + 
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle=45, hjust=1))</code></pre>
+<p><img src="Summary_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+</div>
+</div>
+<div id="data-processing" class="section level1">
+<h1>Data processing</h1>
+<p>Maize Genotypes were downloaded from panzea genotype data. I used the Maize GBS genotypes version 2.7 (<a href="http://cbsusrv04.tc.cornell.edu/users/panzea/download.aspx?filegroupid=4" class="uri">http://cbsusrv04.tc.cornell.edu/users/panzea/download.aspx?filegroupid=4</a>)</p>
+<p>Specifically, the file ZeaGBSv27_publicSamples_imputedV5_AGPv4-161010.h5, imputed genotypes with ACPv4 coordinates.</p>
+<p>To process this file, this was first converted into hapmap format, then converted into VCF [make one step?]. In addition, the panzea data has genotype data for 17,280 public maize lines. The genotype data was subsetted with a list of maize lines used for the Wisconsin diversity panel.</p>
+<p>Filtering of the genotypes was done with vcftools.</p>
+<p>vcftools was used for minor allele frequency, set to 0.01.</p>
+<p>Frequency of missing data at the filtered sites:</p>
+<pre class="r"><code>lmiss &lt;- read.table(&quot;data/lowerFreq/ZeaGBSv27_sf_vcfInfo.lmiss&quot;, sep=&quot;\t&quot;, header=T)
+
+hist(lmiss$F_MISS)</code></pre>
+<p><img src="Summary_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<pre class="r"><code>max(lmiss$F_MISS)</code></pre>
+<pre><code>## [1] 0.88871</code></pre>
+<pre class="r"><code>#number of missing data with &gt;20%
+nrow(lmiss[lmiss$F_MISS &gt; 0.2,])</code></pre>
+<pre><code>## [1] 196727</code></pre>
+<pre class="r"><code>imiss &lt;- read.table(&quot;data/lowerFreq/ZeaGBSv27_sf_vcfInfo.imiss&quot;, sep=&quot;\t&quot;, header=T)
+hist(imiss$F_MISS)</code></pre>
+<p><img src="Summary_files/figure-html/unnamed-chunk-5-2.png" width="672" /></p>
+<pre class="r"><code>max(imiss$F_MISS)</code></pre>
+<pre><code>## [1] 0.999919</code></pre>
+<pre class="r"><code>#lines with above 40% missing
+bad_lines &lt;- imiss[imiss$F_MISS &gt;= 0.4,]
+nrow(bad_lines)</code></pre>
+<pre><code>## [1] 17</code></pre>
+<pre class="r"><code>#Remove these lines from the list of taxa used to subset the hdf5 from tassel
+taxa &lt;- read.table(&quot;data/gemma_input/ZeaGBS_phenotypeLines_T.txt&quot;)
+taxa &lt;- as.character(taxa$V1)
+length(taxa)</code></pre>
+<pre><code>## [1] 631</code></pre>
+<pre class="r"><code>bad_lines &lt;- as.character(bad_lines$INDV)
+t &lt;- taxa %in% bad_lines
+length(t)</code></pre>
+<pre><code>## [1] 631</code></pre>
+<pre class="r"><code>taxa &lt;- taxa[!t]
+length(taxa)</code></pre>
+<pre><code>## [1] 614</code></pre>
+<pre class="r"><code>#write.table(taxa, &quot;data/gemma_input/ZeaGBS_phenotypeLines_c_T.txt&quot;, sep=&quot; &quot;, quote = F, col.names = F, row.names = F)
+
+#also for the taxa list for python
+taxa &lt;- read.table(&quot;data/gemma_input/ZeaGBS_phenotypeLines.txt&quot;)
+taxa &lt;- as.character(taxa$V1)
+t &lt;- taxa %in% bad_lines
+sum(t)</code></pre>
+<pre><code>## [1] 17</code></pre>
+<pre class="r"><code>taxa &lt;- taxa[!t]
+#write.table(taxa, file=&quot;data/gemma_input/ZeaGBS_phenotypeLines_c.txt&quot;,sep=&quot; &quot;, quote = F, col.names = F, row.names = F)</code></pre>
+<p>Using this modified list of maize lines, re-subset the original panzea data (or could just have removed from the already subsetted file, but I just reran the pipeline.)</p>
+<p>Filter with vcftools –maf 0.01:</p>
+<pre class="r"><code>#imiss &lt;- read.table(&quot;data/trait_gwas_output/ZeaGBSv27_s_vcfInfo.imiss&quot;, sep=&quot;\t&quot;, header=T)
+#lmiss &lt;- read.table(&quot;data/trait_gwas_output/ZeaGBSv27_s_vcfInfo.lmiss&quot;, sep=&quot;\t&quot;, header=T)
+#hist(imiss$F_MISS, breaks = 20, main = &quot;Frequency of Misisng Data in Individuals&quot;)
+#hist(lmiss$F_MISS, breaks=20, main=&quot;Frequency of Missing Data in Loci&quot;)
+#(max(lmiss$F_MISS))</code></pre>
+<div id="site-frequency-spectrum" class="section level3">
+<h3>Site frequency spectrum</h3>
+<p>In progress</p>
+</div>
+</div>
+<div id="relatedness-matrix" class="section level1">
+<h1>Relatedness matrix</h1>
+<p>Used GEMMA to construct a relatedness matrix</p>
+<p>Relatedness - either centered or standardized From the GEMMA manual:</p>
+<p>“Specifically, if SNPs with lower minor allele frequency tend to have larger effects (which is inversely proportional to its genotype variance), then the standardized genotype matrix is preferred. If the SNP effect size does not depend on its minor allele frequency, then the centered genotype matrix is preferred. In our previous experience based on a limited examples, we typically find the centered genotype matrix provides better control for population structure in lower organisms, and the two matrices seem to perform similarly in humans.”</p>
+<p>I used the standardized calculation:</p>
+<p><span class="math display">\[G_s = \frac{1}{p}\sum^p_{i=1}\frac{1}{v_{x_i}} (x_i - 1_n \bar x_i)(x_i - 1_n \bar x_i)^T\]</span></p>
+<p>Th standardized calculation of relatedness takes into account the sample’s variance of the <span class="math inline">\(i\)</span>th SNP, whereas the centered calculation does not have the <span class="math inline">\(\frac{1}{v_{x_i}}\)</span> information. As stated above, this is preferable when analyzing data where rare SNPs tend to have larger effects. [I suppose that I can check this in my GWAS output, or is this more of a theoretical thing?]</p>
+<p>Also, GEMMA filters for SNPs. Out of 408,043 SNPs in the bimbam input, GEMMA analyzed 53,479 SNPs. This is increased from previous versions of this with the maize lines with high frequency of missing values from 48K SNPs.</p>
+<p>Why such a large reduction in SNPs analyzed?</p>
+<p>Correlation with covariate?: “By default, SNPs with <span class="math inline">\(r^2\)</span> correlation with any of the covariates above 0.9999 will not be included in the analysis.” But we didn’t put in a covariate matrix, so it can’t be this?</p>
+<pre class="r"><code>relMat &lt;- read.table(&quot;data/trait_gwas_output/GDD/output/ZeaGBSv27_sF_F.sXX.txt&quot;)
+
+image(as.matrix(relMat))</code></pre>
+<p><img src="Summary_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>Population Information on the 490 lines is in progress.</p>
+</div>
+<div id="gemma-univariate-linear-mixed-model" class="section level1">
+<h1>GEMMA Univariate Linear Mixed Model</h1>
+<p>The equation:</p>
+<p><span class="math display">\[y = W \alpha + x \beta + u + \epsilon\]</span> (but without <span class="math inline">\(W\alpha\)</span>?)</p>
+<p><span class="math display">\[u \sim MVN_n(0,\lambda\tau^{-1}K), \epsilon \sim MVN_n(0,\tau^{-1}I_n)\]</span></p>
+<p><span class="math inline">\(y\)</span> = n-vector of quantitative traits for <span class="math inline">\(n\)</span> individuals<br />
+<span class="math inline">\(W\)</span> = nxc matrix of covariates (fixed effects)<br />
+<span class="math inline">\(\alpha\)</span> = c-vector of corresponding coefficients including the intercept<br />
+<span class="math inline">\(x\)</span> = n-vector of marker genotypes<br />
+<span class="math inline">\(\beta\)</span> = effect size of the marker<br />
+<span class="math inline">\(u\)</span> = n-vector of random effects<br />
+<span class="math inline">\(\epsilon\)</span> = n-vector or errors<br />
+<span class="math inline">\(\tau^{-1}\)</span> = variance of the residual errors<br />
+<span class="math inline">\(\lambda\)</span> = ratio between the two variance components<br />
+<span class="math inline">\(K\)</span> = known nxn relatedness matrix<br />
+<span class="math inline">\(I_n\)</span> = nxn identity matrix<br />
+<span class="math inline">\(MVN_n\)</span> = n-dimensional multivariate normal distribution</p>
+<pre class="r"><code>tot_sig_genes &lt;- data.frame()
+
+for (i in 1:length(traits)) {
+  t &lt;- as.character(traits[1,i])
+  
+  # trait GWAS with maize lines with high freq missing
+  #gwas_path &lt;- paste(paste(&quot;data/lowerFreq/&quot;, t, sep=&quot;&quot;), &quot;/&quot;, sep=&quot;&quot;)
+  
+  #assoc_file &lt;- paste(paste(&quot;output/ZeaGBSv27_&quot;, t, sep=&quot;&quot;), &quot;.assoc.txt&quot;, sep=&quot;&quot;)
+  #print(paste(gwas_path, assoc_file, sep=&quot;&quot;))
+  #assoc &lt;- read.table(paste(gwas_path, assoc_file, sep=&quot;&quot;), sep=&quot;\t&quot;, header=T)
+  #print(dim(assoc))
+  
+  # trait GWAS with the individiduals with high freq missing data removed
+  gwas_rm &lt;- paste(paste(&quot;data/trait_gwas_output/&quot;, t, sep=&quot;&quot;), &quot;/&quot;, sep=&quot;&quot;)
+  rm_assoc_file &lt;- paste(paste(&quot;output/ZeaGBSv27_&quot;, t, sep=&quot;&quot;), &quot;.assoc.txt&quot;, sep=&quot;&quot;)
+  
+  assoc2 &lt;- read.table(paste(gwas_rm, rm_assoc_file, sep=&quot;&quot;), sep=&quot;\t&quot;, header=T)
+  
+  sg &lt;- assoc2[assoc2$p_score &lt;= 0.0001,]
+  tot_sig_genes &lt;- rbind(tot_sig_genes, sg)
+  
+  soi &lt;- as.character(sg$rs)
+  
+  
+  #par(mfrow=c(2,2), las=1)
+  #manhattan(assoc, chr=&quot;chr&quot;, snp=&quot;rs&quot;, bp=&quot;ps&quot;, p=&quot;p_score&quot;, main=t)
+  #qq(assoc$p_score, main=paste(t, &quot;Q-Q plot of GWAS p-values&quot;, sep=&quot;\n&quot;))
+  pdf_file &lt;- paste(paste(gwas_rm, t, sep=&quot;&quot;), &quot;man.pdf&quot;, sep=&quot;&quot;)
+  pdf(pdf_file)
+  manhattan(assoc2, chr=&quot;chr&quot;, snp=&quot;rs&quot;, bp=&quot;ps&quot;, p=&quot;p_score&quot;, main=t)
+  dev.off()
+  manhattan(assoc2, chr=&quot;chr&quot;, snp=&quot;rs&quot;, bp=&quot;ps&quot;, p=&quot;p_score&quot;, main=t, highlight = soi)
+  qq(assoc2$p_score, main=paste(t, &quot;Q-Q plot of GWAS p-values&quot;, sep=&quot;\n&quot;))
+}</code></pre>
+<p><img src="Summary_files/figure-html/unnamed-chunk-8-1.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-2.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-3.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-4.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-5.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-6.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-7.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-8.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-9.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-10.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-11.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-12.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-13.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-14.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-15.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-16.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-17.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-18.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-19.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-20.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-21.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-22.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-23.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-24.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-25.png" width="1152" /><img src="Summary_files/figure-html/unnamed-chunk-8-26.png" width="1152" /></p>
+<pre class="r"><code>dim(tot_sig_genes)</code></pre>
+<pre><code>## [1] 130  14</code></pre>
+<pre class="r"><code>tot_sig_genes</code></pre>
+<pre><code>##         chr            rs        ps n_miss allele1 allele0    af
+## 24049     2   S2_34570841  35199328     21       G       A 0.209
+## 25277     2   S2_50811249  51440516     21       C       G 0.177
+## 48521     3  S3_220655798 220739882     42       G       A 0.022
+## 51308     4   S4_34804224  34837738     17       C       T 0.181
+## 95372     7  S7_160561002 160600567     35       G       A 0.084
+## 101840    8  S8_106745252 106271020     22       A       G 0.240
+## 112582    9  S9_105425957 106433016     44       C       G 0.370
+## 122710   10 S10_127261291 127283380     35       G       A 0.234
+## 122713   10 S10_127261339 127283428     14       G       A 0.259
+## 1193      1   S1_11300916  11299417     27       T       G 0.062
+## 10340     1  S1_178674115 178701191     37       G       C 0.029
+## 38804     3   S3_64289771  64291852     30       A       C 0.018
+## 40093     3  S3_117087237 117106256     31       G       C 0.015
+## 40094     3  S3_117087276 117106295     31       T       A 0.015
+## 40215     3  S3_120427425 120446044     23       C       T 0.112
+## 44989     3  S3_188514498 188573246     40       C       A 0.020
+## 72420     5  S5_181388784 181439443     39       T       A 0.086
+## 72422     5  S5_181388800 181439459     38       A       T 0.087
+## 74141     5  S5_199389319 199439746     39       C       G 0.013
+## 107621    8  S8_174288469 173842396     11       G       A 0.015
+## 107624    8  S8_174288509 173842436     11       A       G 0.015
+## 107630    8  S8_174293929 173847856     18       T       C 0.015
+## 172       1    S1_3079325   3072175     32       T       G 0.379
+## 15417     1  S1_246723389 246782320      2       C       T 0.174
+## 32732     2  S2_207839659 208503228     36       C       T 0.025
+## 32733     2  S2_207839665 208503234     37       T       C 0.038
+## 32734     2  S2_207839668 208503237     37       C       T 0.038
+## 51935     4   S4_42681027  42707807     13       C       T 0.433
+## 61740     4  S4_239705014 240251912     20       C       T 0.065
+## 83974     6  S6_146616881 146809230     14       C       G 0.101
+## 94395     7  S7_153285878 153323002     22       G       A 0.407
+## 105771    8  S8_159386589 158929493     26       G       A 0.039
+## 30571     2  S2_183752707 184402207     40       C       T 0.053
+## 327321    2  S2_207839659 208503228     36       C       T 0.025
+## 36147     3   S3_16572521  16580845     33       T       G 0.060
+## 36226     3   S3_18184717  18193041     19       G       A 0.150
+## 51627     4   S4_37390502  37423204     30       A       C 0.433
+## 59356     4  S4_200800596 200978437     32       G       T 0.063
+## 81094     6  S6_106978915 107149928     12       A       T 0.188
+## 81584     6  S6_113720129 113900506     34       G       A 0.417
+## 81751     6  S6_115290678 115471372      7       C       T 0.023
+## 839741    6  S6_146616881 146809230     14       C       G 0.101
+## 86916     7    S7_2583090   2586367     37       G       A 0.151
+## 943951    7  S7_153285878 153323002     22       G       A 0.407
+## 97927     8   S8_11484757  11487228     48       G       C 0.053
+## 102375    8  S8_118103597 117630837     11       C       T 0.154
+## 124758   10 S10_147245009 146680171     49       T       C 0.271
+## 18467     1  S1_283640764 283711873      2       C       T 0.293
+## 38173     3   S3_51326544  51327950     30       A       G 0.428
+## 53012     4   S4_70354602  70379495     16       G       A 0.430
+## 943952    7  S7_153285878 153323002     22       G       A 0.407
+## 979271    8   S8_11484757  11487228     48       G       C 0.053
+## 117815   10  S10_19515059  19523401     21       A       G 0.113
+## 252771    2   S2_50811249  51440516     21       C       G 0.177
+## 40241     3  S3_121666916 121685535     23       A       T 0.058
+## 815841    6  S6_113720129 113900506     34       G       A 0.417
+## 839742    6  S6_146616881 146809230     14       C       G 0.101
+## 83980     6  S6_146617268 146809617     25       C       A 0.100
+## 83984     6  S6_146694353 146886702     25       G       C 0.108
+## 103266    8  S8_131967396 131500284     45       C       T 0.290
+## 103289    8  S8_132327825 131860713     27       T       C 0.450
+## 20884     2    S2_5692342   5697881     34       G       T 0.440
+## 23757     2   S2_30232490  30861039     34       G       C 0.285
+## 57536     4  S4_178053213 178082520     49       A       T 0.050
+## 57537     4  S4_178053214 178082521     49       A       G 0.050
+## 83417     6  S6_139887605 140076656     44       C       T 0.151
+## 95180     7  S7_159749247 159787577     46       A       G 0.348
+## 81115     6  S6_107105126 107276139     41       G       C 0.249
+## 979272    8   S8_11484757  11487228     48       G       C 0.053
+## 109180    9   S9_26826765  26840153     38       C       G 0.314
+## 109182    9   S9_26828478  26841866     12       T       C 0.222
+## 4439      1   S1_46651270  46655792     44       G       A 0.451
+## 92487     7  S7_131394545 131427303     24       G       C 0.394
+## 112063    9   S9_96717206  97724251     10       T       G 0.200
+## 112064    9   S9_96717214  97724259     10       C       A 0.200
+## 112656    9  S9_108351359 108371045     16       C       T 0.316
+## 6         1     S1_222588    222588     27       T       C 0.120
+## 10806     1  S1_184242582 184273139      2       A       G 0.158
+## 10807     1  S1_184242633 184273190     10       C       T 0.165
+## 36174     3   S3_17116159  17124483     44       C       T 0.091
+## 36285     3   S3_19256142  19264466     18       G       A 0.033
+## 45275     3  S3_191368808 191427556     35       C       T 0.426
+## 51246     4   S4_33697786  33728570     43       A       T 0.393
+## 102358    8  S8_117757327 117284567     35       G       A 0.477
+## 111129    9   S9_77152052  78160432     39       G       C 0.011
+## 111347    9   S9_82735897  83742274     17       C       T 0.025
+## 7527      1   S1_96836688  96845508     33       A       C 0.050
+## 305711    2  S2_183752707 184402207     40       C       T 0.053
+## 37126     3   S3_34681046  34681520     11       G       A 0.086
+## 37519     3   S3_40446855  40447662     31       A       G 0.221
+## 37953     3   S3_47337605  47339811     32       A       G 0.023
+## 37977     3   S3_47592959  47595165     37       C       T 0.231
+## 38161     3   S3_50780889  50782495     34       G       T 0.468
+## 381731    3   S3_51326544  51327950     30       A       G 0.428
+## 388041    3   S3_64289771  64291852     30       A       C 0.018
+## 40639     3  S3_128096496 128118118     36       T       A 0.097
+## 83206     6  S6_136411551 136598695     25       G       A 0.192
+## 86675     6  S6_167977249 168184652     39       G       A 0.012
+## 943953    7  S7_153285878 153323002     22       G       A 0.407
+## 113822    9  S9_127209934 127468695      7       T       C 0.035
+## 305712    2  S2_183752707 184402207     40       C       T 0.053
+## 37448     3   S3_39212756  39213563      7       G       T 0.331
+## 379531    3   S3_47337605  47339811     32       A       G 0.023
+## 379771    3   S3_47592959  47595165     37       C       T 0.231
+## 38260     3   S3_53689657  53691526     26       G       A 0.055
+## 38261     3   S3_53689659  53691528     39       T       C 0.057
+## 388042    3   S3_64289771  64291852     30       A       C 0.018
+## 41415     3  S3_140843527 140871741     34       T       C 0.014
+## 78322     6   S6_38793553  38793139     25       C       T 0.078
+## 81845     6  S6_117453222 117636053     39       C       A 0.178
+## 832061    6  S6_136411551 136598695     25       G       A 0.192
+## 103265    8  S8_131967293 131500181     42       A       G 0.292
+## 1032661   8  S8_131967396 131500284     45       C       T 0.290
+## 114286    9  S9_133921691 134174934     10       A       G 0.019
+## 114289    9  S9_133921696 134174939     10       G       A 0.019
+## 305713    2  S2_183752707 184402207     40       C       T 0.053
+## 374481    3   S3_39212756  39213563      7       G       T 0.331
+## 379532    3   S3_47337605  47339811     32       A       G 0.023
+## 379772    3   S3_47592959  47595165     37       C       T 0.231
+## 382601    3   S3_53689657  53691526     26       G       A 0.055
+## 382611    3   S3_53689659  53691528     39       T       C 0.057
+## 388043    3   S3_64289771  64291852     30       A       C 0.018
+## 414151    3  S3_140843527 140871741     34       T       C 0.014
+## 783221    6   S6_38793553  38793139     25       C       T 0.078
+## 818451    6  S6_117453222 117636053     39       C       A 0.178
+## 832062    6  S6_136411551 136598695     25       G       A 0.192
+## 1032651   8  S8_131967293 131500181     42       A       G 0.292
+## 1032662   8  S8_131967396 131500284     45       C       T 0.290
+## 1142861   9  S9_133921691 134174934     10       A       G 0.019
+## 1142891   9  S9_133921696 134174939     10       G       A 0.019
+##                 beta          se     l_remle       l_mle       p_wald
+## 24049    31.63138000  7.91798600 0.186252100 0.187928300 7.471218e-05
+## 25277    34.36530000  8.09062400 0.205520100 0.209204100 2.588913e-05
+## 48521    85.89554000 20.47807000 0.141366700 0.143878900 3.248530e-05
+## 51308    33.82891000  8.10395800 0.187573600 0.190025400 3.538809e-05
+## 95372   -46.45421000 11.43503000 0.153857600 0.156401600 5.657476e-05
+## 101840  -29.51638000  6.89251100 0.073605130 0.075280060 2.227396e-05
+## 112582   28.79893000  6.51948000 0.068298450 0.066633000 1.231662e-05
+## 122710   30.69126000  7.40949500 0.151040800 0.151889400 4.054965e-05
+## 122713   28.50704000  6.98222700 0.144811300 0.145943900 5.198946e-05
+## 1193     -0.10916390  0.02552788 0.031231270 0.032024810 2.287239e-05
+## 10340    -0.15368720  0.03697399 0.033722210 0.034744980 3.814714e-05
+## 38804    -0.18923900  0.04597028 0.002338741 0.002238937 4.515477e-05
+## 40093    -0.20074370  0.04986386 0.023567610 0.024727900 6.580668e-05
+## 40094    -0.20074370  0.04986386 0.023567610 0.024727900 6.580668e-05
+## 40215    -0.07966549  0.01966001 0.053701680 0.054467350 5.903681e-05
+## 44989     0.18729580  0.04486686 0.044823460 0.045312190 3.537148e-05
+## 72420    -0.09253044  0.02186235 0.000010000 0.000010000 2.762848e-05
+## 72422    -0.09207261  0.02181224 0.000010000 0.000010000 2.899480e-05
+## 74141    -0.25008390  0.05350783 0.020461730 0.021542360 3.830926e-06
+## 107621   -0.25626130  0.04936045 0.007917122 0.008304068 3.065052e-07
+## 107624   -0.25626130  0.04936045 0.007917122 0.008304068 3.065052e-07
+## 107630   -0.23364100  0.04963496 0.008105506 0.008330114 3.276906e-06
+## 172       5.57877800  1.25634900 0.183185300 0.185255800 1.111168e-05
+## 15417     6.78712000  1.55873100 0.229885800 0.232824300 1.627882e-05
+## 32732   -19.13046000  3.70053300 0.240839100 0.244997900 3.427245e-07
+## 32733   -13.05304000  3.02364700 0.226474600 0.230829900 1.916376e-05
+## 32734   -13.05304000  3.02364700 0.226474600 0.230829900 1.916376e-05
+## 51935     5.10474900  1.22275800 0.251095000 0.253946600 3.532629e-05
+## 61740   -10.77245000  2.44935700 0.223562900 0.225811000 1.341783e-05
+## 83974    -8.53001700  1.92789500 0.279774200 0.284692400 1.193053e-05
+## 94395     5.14685200  1.20913300 0.156023500 0.158106000 2.489411e-05
+## 105771   12.49685000  3.02829700 0.311911100 0.318355000 4.327411e-05
+## 30571    -9.47085200  2.25430800 0.317937100 0.325608300 3.157004e-05
+## 327321  -13.53388000  3.19849300 0.380209300 0.389037300 2.775656e-05
+## 36147    10.24014000  2.40498400 0.374290900 0.379673000 2.476198e-05
+## 36226     6.30035300  1.41679800 0.368118500 0.375182700 1.079719e-05
+## 51627     4.54915700  1.12119800 0.301393300 0.305228200 5.776882e-05
+## 59356    -8.27523500  2.04399400 0.317911900 0.325150100 5.992131e-05
+## 81094     5.51711900  1.31040200 0.243894600 0.248715100 3.037713e-05
+## 81584    -4.62785900  1.07536100 0.361769100 0.369043700 2.031951e-05
+## 81751    13.26697000  3.27925900 0.398532200 0.408628700 6.062849e-05
+## 839741   -6.80386500  1.65656200 0.444118700 0.455205600 4.695378e-05
+## 86916     5.77236900  1.41330500 0.336678600 0.344888300 5.166489e-05
+## 943951    4.49659300  1.04604000 0.268846000 0.274419500 2.075327e-05
+## 97927    11.17105000  2.24828300 0.328873600 0.336076300 9.341664e-07
+## 102375    5.95326100  1.47610700 0.373081900 0.380335600 6.387269e-05
+## 124758   -4.95474000  1.18035800 0.280463200 0.286206000 3.205304e-05
+## 18467    -0.51160150  0.11894530 0.161214700 0.163572600 2.053183e-05
+## 38173     0.45757680  0.11333520 0.145782100 0.147461700 6.275254e-05
+## 53012     0.46215810  0.11245670 0.156881800 0.158430400 4.647827e-05
+## 943952    0.49976460  0.11055910 0.091105270 0.091987130 7.757135e-06
+## 979271    1.00037500  0.24435770 0.114517800 0.117197700 4.964075e-05
+## 117815    0.69881690  0.17375720 0.124982500 0.126943900 6.690734e-05
+## 252771    0.19964150  0.04822650 0.050116630 0.050035280 4.097691e-05
+## 40241     0.32992490  0.07716323 0.058706930 0.060062960 2.293042e-05
+## 815841   -0.15243230  0.03781625 0.043953060 0.043507270 6.445822e-05
+## 839742   -0.27849240  0.06007319 0.085768700 0.087310680 4.568494e-06
+## 83980    -0.24947550  0.06087448 0.088356910 0.089928380 4.875819e-05
+## 83984    -0.23898320  0.05894573 0.089550750 0.090965110 5.851809e-05
+## 103266    0.17573500  0.04134027 0.024918850 0.023334940 2.551361e-05
+## 103289    0.15378050  0.03821034 0.061321960 0.060226470 6.614799e-05
+## 20884    -0.24369380  0.05557533 0.009171521 0.007382444 1.422135e-05
+## 23757    -0.25769220  0.06084201 0.000010000 0.000010000 2.727251e-05
+## 57536     0.53238610  0.13243610 0.052020100 0.051322450 6.741916e-05
+## 57537     0.53238610  0.13243610 0.052020100 0.051322450 6.741916e-05
+## 83417     0.33694810  0.07862699 0.021817470 0.020454190 2.198487e-05
+## 95180     0.24445870  0.05936995 0.020004420 0.018458320 4.496634e-05
+## 81115     0.42834110  0.10192240 0.013999760 0.014230580 3.138240e-05
+## 979272    0.79373890  0.19821690 0.024932270 0.026228130 7.185903e-05
+## 109180    0.43713650  0.09787952 0.112219300 0.113624000 9.908602e-06
+## 109182    0.42799750  0.10349780 0.036433770 0.036643600 4.173149e-05
+## 4439     -0.20994290  0.04899401 0.000010000 0.000010000 2.201598e-05
+## 92487     0.22654830  0.04870868 0.000010000 0.000010000 4.257559e-06
+## 112063    0.25203510  0.05880364 0.000010000 0.000010000 2.192332e-05
+## 112064    0.25203510  0.05880364 0.000010000 0.000010000 2.192332e-05
+## 112656    0.20867980  0.05093055 0.000010000 0.000010000 4.893254e-05
+## 6         0.26263570  0.06443742 0.000010000 0.000010000 5.351980e-05
+## 10806     0.24022490  0.05635072 0.000010000 0.000010000 2.421801e-05
+## 10807     0.23037440  0.05569036 0.000010000 0.000010000 4.149119e-05
+## 36174     0.30860390  0.07422999 0.000010000 0.000010000 3.802307e-05
+## 36285    -0.46586760  0.11708860 0.000010000 0.000010000 7.978895e-05
+## 45275     0.20066060  0.04274089 0.000010000 0.000010000 3.472411e-06
+## 51246    -0.17463590  0.04368987 0.000010000 0.000010000 7.401525e-05
+## 102358    0.17381850  0.04233982 0.000010000 0.000010000 4.732845e-05
+## 111129    0.92707500  0.20108910 0.000010000 0.000010000 5.142370e-06
+## 111347    0.53327750  0.13136750 0.000010000 0.000010000 5.728617e-05
+## 7527     -1.03719500  0.24129690 0.096998750 0.100432300 2.077707e-05
+## 305711   -1.05291700  0.23408740 0.012521260 0.013491100 8.583374e-06
+## 37126     0.79867110  0.18546760 0.000010000 0.000010000 2.008080e-05
+## 37519     0.64621970  0.14776290 0.226981600 0.227497100 1.496666e-05
+## 37953    -1.50011800  0.36358780 0.085424460 0.087039380 4.342257e-05
+## 37977     0.59249310  0.13897100 0.119329300 0.118608800 2.417637e-05
+## 38161     0.45009490  0.11024130 0.092141010 0.093255770 5.198613e-05
+## 381731    0.49634100  0.11039990 0.094633570 0.095580700 8.665865e-06
+## 388041   -1.64425700  0.40610540 0.089602980 0.090919170 5.985144e-05
+## 40639    -0.79782090  0.18421730 0.017823280 0.012739470 1.803634e-05
+## 83206    -0.61209310  0.13489800 0.058099380 0.059166000 7.177157e-06
+## 86675     2.11827400  0.48901000 0.121066900 0.126470400 1.796620e-05
+## 943953    0.48003240  0.11008660 0.098719070 0.099857100 1.583848e-05
+## 113822   -1.20632600  0.27474310 0.001745508 0.001932899 1.386043e-05
+## 305712    3.61558600  0.75281950 0.000010000 0.000010000 2.085480e-06
+## 37448     1.43713000  0.35069480 0.000010000 0.000010000 4.880797e-05
+## 379531    4.88087300  1.15022600 0.018886210 0.019148370 2.635469e-05
+## 379771   -1.86952200  0.44161140 0.081946700 0.079967890 2.751016e-05
+## 38260     3.07286300  0.73897780 0.000010000 0.000010000 3.788520e-05
+## 38261     3.04714700  0.73984460 0.000010000 0.000010000 4.476281e-05
+## 388042    5.23959200  1.27777200 0.013384840 0.013307370 4.827739e-05
+## 41415     6.34129900  1.49023500 0.051996330 0.052643970 2.504622e-05
+## 78322    -2.64679200  0.62905360 0.000010000 0.000010000 3.072577e-05
+## 81845    -1.89335600  0.45414300 0.048975670 0.050299350 3.619094e-05
+## 832061    1.93541800  0.42527940 0.000010000 0.000010000 6.749871e-06
+## 103265   -1.57623200  0.38788960 0.029911560 0.027702290 5.630307e-05
+## 1032661  -1.68425700  0.39107460 0.034698250 0.032666730 2.003860e-05
+## 114286   -4.99019800  1.21810100 0.031171210 0.034376010 4.906317e-05
+## 114289   -4.99019800  1.21810100 0.031171210 0.034376010 4.906317e-05
+## 305713   -3.61561500  0.75281890 0.000010000 0.000010000 2.085057e-06
+## 374481   -1.43712200  0.35069470 0.000010000 0.000010000 4.881229e-05
+## 379532   -4.88089500  1.15022200 0.018879100 0.019141050 2.635068e-05
+## 379772    1.86953100  0.44160970 0.081941750 0.079962810 2.750582e-05
+## 382601   -3.07283700  0.73897770 0.000010000 0.000010000 3.789072e-05
+## 382611   -3.04712200  0.73984450 0.000010000 0.000010000 4.476908e-05
+## 388043   -5.23961700  1.27776700 0.013377680 0.013300040 4.827008e-05
+## 414151   -6.34130300  1.49022900 0.051986730 0.052634080 2.504398e-05
+## 783221    2.64676100  0.62905360 0.000010000 0.000010000 3.073216e-05
+## 818451    1.89333400  0.45414240 0.048970930 0.050294470 3.619770e-05
+## 832062   -1.93543400  0.42527910 0.000010000 0.000010000 6.748635e-06
+## 1032651   1.57621000  0.38788920 0.029910380 0.027701140 5.631572e-05
+## 1032662   1.68423500  0.39107430 0.034697300 0.032665810 2.004326e-05
+## 1142861   4.99017500  1.21810100 0.031167240 0.034371840 4.906652e-05
+## 1142891   4.99017500  1.21810100 0.031167240 0.034371840 4.906652e-05
+##                p_lrt      p_score
+## 24049   7.162003e-05 9.379006e-05
+## 25277   2.504052e-05 3.566789e-05
+## 48521   3.292994e-05 4.745298e-05
+## 51308   3.380667e-05 4.647712e-05
+## 95372   5.569856e-05 7.554608e-05
+## 101840  3.634521e-05 7.257530e-05
+## 112582  2.140006e-05 5.575090e-05
+## 122710  4.010543e-05 5.628499e-05
+## 122713  5.230401e-05 7.322364e-05
+## 1193    2.179704e-05 3.083765e-05
+## 10340   3.650330e-05 5.000999e-05
+## 38804   4.934064e-05 7.449870e-05
+## 40093   6.337605e-05 8.390636e-05
+## 40094   6.337605e-05 8.390636e-05
+## 40215   6.022447e-05 8.607183e-05
+## 44989   3.468398e-05 4.865667e-05
+## 72420   3.095540e-05 5.309480e-05
+## 72422   3.249518e-05 5.494887e-05
+## 74141   3.664668e-06 5.992435e-06
+## 107621  3.092595e-07 6.799418e-07
+## 107624  3.092595e-07 6.799418e-07
+## 107630  3.342110e-06 5.936559e-06
+## 172     1.321997e-05 2.274664e-05
+## 15417   1.604632e-05 2.384148e-05
+## 32732   3.248537e-07 6.599456e-07
+## 32733   1.904758e-05 2.809681e-05
+## 32734   1.904758e-05 2.809681e-05
+## 51935   3.389201e-05 4.666240e-05
+## 61740   1.341721e-05 2.053842e-05
+## 83974   1.139884e-05 1.706321e-05
+## 94395   3.675402e-05 6.807962e-05
+## 105771  4.377681e-05 6.328363e-05
+## 30571   3.351195e-05 4.968125e-05
+## 327321  2.662760e-05 3.722490e-05
+## 36147   2.385583e-05 3.377103e-05
+## 36226   1.041206e-05 1.569005e-05
+## 51627   6.478090e-05 9.767051e-05
+## 59356   6.383220e-05 9.203139e-05
+## 81094   4.482753e-05 8.142985e-05
+## 81584   1.979083e-05 2.858169e-05
+## 81751   5.798428e-05 7.689187e-05
+## 839741  4.574792e-05 6.348713e-05
+## 86916   5.259426e-05 7.333885e-05
+## 943951  2.649611e-05 4.594770e-05
+## 97927   9.472140e-07 1.835668e-06
+## 102375  6.185881e-05 8.228942e-05
+## 124758  3.885645e-05 6.318806e-05
+## 18467   1.955320e-05 2.785345e-05
+## 38173   6.080190e-05 8.117161e-05
+## 53012   4.450779e-05 6.005193e-05
+## 943952  9.345143e-06 1.697104e-05
+## 979271  5.251998e-05 7.654620e-05
+## 117815  6.806981e-05 9.317886e-05
+## 252771  4.170673e-05 5.898339e-05
+## 40241   2.244734e-05 3.235420e-05
+## 815841  6.821894e-05 9.678839e-05
+## 839742  4.346871e-06 6.999731e-06
+## 83980   4.712990e-05 6.419397e-05
+## 83984   5.674106e-05 7.656729e-05
+## 103266  3.226061e-05 5.652113e-05
+## 103289  6.460121e-05 8.679021e-05
+## 20884   1.752983e-05 3.139021e-05
+## 23757   3.815796e-05 9.975880e-05
+## 57536   6.513162e-05 8.670639e-05
+## 57537   6.513162e-05 8.670639e-05
+## 83417   2.409108e-05 3.772453e-05
+## 95180   5.018136e-05 8.042692e-05
+## 81115   3.183459e-05 4.635703e-05
+## 979272  7.013273e-05 9.333669e-05
+## 109180  1.250039e-05 2.791218e-05
+## 109182  3.991357e-05 5.422581e-05
+## 4439    2.097439e-05 2.973204e-05
+## 92487   4.023552e-06 6.457992e-06
+## 112063  2.088569e-05 2.961503e-05
+## 112064  2.088569e-05 2.961503e-05
+## 112656  4.679978e-05 6.288216e-05
+## 6       5.120947e-05 6.841434e-05
+## 10806   2.308300e-05 3.250497e-05
+## 10807   3.965084e-05 5.384910e-05
+## 36174   3.632107e-05 4.961065e-05
+## 36285   7.649330e-05 9.968685e-05
+## 45275   3.278266e-06 5.350526e-06
+## 51246   7.093214e-05 9.286419e-05
+## 102358  4.525824e-05 6.094143e-05
+## 111129  4.864248e-06 7.689300e-06
+## 111347  5.483143e-05 7.293829e-05
+## 7527    1.989372e-05 2.838630e-05
+## 305711  1.428298e-05 2.993290e-05
+## 37126   4.180603e-05 9.568057e-05
+## 37519   2.096962e-05 4.609991e-05
+## 37953   4.249566e-05 5.847046e-05
+## 37977   2.313617e-05 3.272613e-05
+## 38161   5.032227e-05 6.797557e-05
+## 381731  8.287261e-06 1.266433e-05
+## 388041  5.820693e-05 7.801859e-05
+## 40639   2.793129e-05 5.019327e-05
+## 83206   7.689655e-06 1.273713e-05
+## 86675   1.717452e-05 2.496535e-05
+## 943953  1.512801e-05 2.201840e-05
+## 113822  2.781153e-05 6.646633e-05
+## 305712  2.425649e-06 4.677670e-06
+## 37448   5.781731e-05 9.783232e-05
+## 379531  2.751690e-05 4.106474e-05
+## 379771  2.680344e-05 3.831553e-05
+## 38260   4.480969e-05 8.163817e-05
+## 38261   5.299766e-05 9.488086e-05
+## 388042  5.207674e-05 7.594239e-05
+## 41415   2.394084e-05 3.368585e-05
+## 78322   3.629610e-05 6.390623e-05
+## 81845   3.474575e-05 4.783353e-05
+## 832061  7.903267e-06 1.630192e-05
+## 103265  5.640532e-05 7.961552e-05
+## 1032661 1.968745e-05 2.929936e-05
+## 114286  4.890481e-05 6.775067e-05
+## 114289  4.890481e-05 6.775067e-05
+## 305713  2.425058e-06 4.676622e-06
+## 374481  5.782012e-05 9.783860e-05
+## 379532  2.751290e-05 4.105949e-05
+## 379772  2.679931e-05 3.831026e-05
+## 382601  4.481445e-05 8.164500e-05
+## 382611  5.300300e-05 9.488841e-05
+## 388043  5.206936e-05 7.593297e-05
+## 414151  2.393874e-05 3.368316e-05
+## 783221  3.630223e-05 6.391466e-05
+## 818451  3.475221e-05 4.784174e-05
+## 832062  7.901496e-06 1.629866e-05
+## 1032651 5.641718e-05 7.962984e-05
+## 1032662 1.969178e-05 2.930488e-05
+## 1142861 4.890787e-05 6.775432e-05
+## 1142891 4.890787e-05 6.775432e-05</code></pre>
+<p>Things to do:</p>
+<p>local false sign rate and ASHR</p>
+<p>Matthew Stephens: <a href="https://academic.oup.com/biostatistics/article/doi/10.1093/biostatistics/kxw041/2557030/False-discovery-rates-a-new-deal" class="uri">https://academic.oup.com/biostatistics/article/doi/10.1093/biostatistics/kxw041/2557030/False-discovery-rates-a-new-deal</a> (FDR, a new deal)</p>
+<p>ashr: <a href="https://github.com/stephens999/ashr" class="uri">https://github.com/stephens999/ashr</a></p>
+<ul>
+<li>give beta and se from gemma output</li>
+</ul>
+<p>permutations in phenotype in lmm? to calibrate p-values</p>
+<p>genomic control</p>
+<p>Qx - take top X hits for each trait<br />
+Talk to Emily and Markus</p>
+<p>Expression gwas</p>
+<p>Gwas - pop structure dropping individuals/ why are snps being dropped</p>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
